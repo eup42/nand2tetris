@@ -1,4 +1,5 @@
 // This file is part of www.nand2tetris.org
+
 // and the book "The Elements of Computing Systems"
 // by Nisan and Schocken, MIT Press.
 // File name: projects/01/Or.hdl
@@ -14,5 +15,7 @@ CHIP Or {
     OUT out;
 
     PARTS:
-    // Put your code here:
+    Not(in = a, out = na);
+    Not(in = b, out = nb);
+    Nand(a = na, b = nb, out = out);
 }
