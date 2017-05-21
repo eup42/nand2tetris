@@ -39,5 +39,51 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+    // Decode
+    Or(a = instruction[15], b = false, out = instructionC);
+    And(a = instruction[12], b = instructionC, out = compA);
+    And(a = instruction[11], b = instructionC, out = compZX);
+    And(a = instruction[10], b = instructionC, out = compNX);
+    And(a = instruction[9], b = instructionC, out = compZY);
+    And(a = instruction[8], b = instructionC, out = compNY);
+    And(a = instruction[7], b = instructionC, out = compF);
+    And(a = instruction[6], b = instructionC, out = compNO);
+    And(a = instruction[5], b = instructionC, out = destAReg);
+    And(a = instruction[4], b = instructionC, out = destDReg);
+    And(a = instruction[3], b = instructionC, out = destMEM, out = writeM);
+    And(a = instruction[2], b = instructionC, out = jumpLT);
+    And(a = instruction[1], b = instructionC, out = jumpEQ);
+    And(a = instruction[0], b = instructionC, out = jumpGT);
+
+    // Mux01
+    Mux16(a = instruction, b = outALU, sel = instructionC, out = outMux01);
+
+    // A Register
+    Not(in = instructionC, out = instructionA);
+    Or(a = instructionA, b = destAReg, out = loadAReg);
+    ARegister(in = outMux01, load = loadAReg,
+                out = outAReg, out[0..14] = addressM);
+
+    // D Register
+    DRegister(in = outALU, load = destDReg, out = outDReg);
+
+    // Mux02
+    Mux16(a = outAReg, b = inM, sel = compA, out = outMux02);
+
+    // PC
+    Not(in = outALUng, out = notOutALUng);
+    Not(in = outALUzr, out = notOutALUzr);
+    And(a = notOutALUng, b = notOutALUzr, out = outALUpg);
+    And(a = outALUng, b = jumpLT, out = jump1);
+    And(a = outALUpg, b = jumpGT, out = jump2);
+    And(a = outALUzr, b = jumpEQ, out = jump3);
+    Or8Way(in[0] = jump1, in[1] = jump2,
+            in[2] = jump3, in[3..7] = false, out = loadPC);
+    Not(in = loadPC, out = incPC);
+    PC(in = outAReg, inc = incPC, load = loadPC, reset = reset , out[0..14] = pc);
+
+    // ALU
+    ALU(x = outDReg, y = outMux02, zx = compZX, nx = compNX,
+        zy = compZY, ny = compNY, f = compF, no = compNO,
+        out = outALU, out = outM, zr = outALUzr, ng = outALUng);
 }
