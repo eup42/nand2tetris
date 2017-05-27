@@ -22,4 +22,4 @@ enum commandType {
     L_COMMAND,
 };
 
-#endif _PARSER_H_
+#endif
