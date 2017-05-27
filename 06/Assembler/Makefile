@@ -1,10 +1,12 @@
 
 TARGET = Assembler
+OBJ = assembler.o parser.o
 
 
 all: $(TARGET)
 
-Assembler: Assembler.o parser.o
+Assembler: $(OBJ)
+	$(CC) -o $(TARGET) $(OBJ)
 
 .PHONY: clean
 clean:
