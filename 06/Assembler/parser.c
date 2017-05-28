@@ -97,9 +97,6 @@ void _parser_parserInit(char *name)
     data.lines[line_num] = NULL;
 
     free(buff);
-    for (line_num = 0; data.lines[line_num] != NULL; line_num++)
-        printf("%s\n", data.lines[line_num]);
-
     fclose(fp);
 }
 
