@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS += -Wall -g
 
 TARGET = Assembler
-OBJ = assembler.o parser.o
+OBJ = assembler.o parser.o code.o
 
 
 all: $(TARGET)
