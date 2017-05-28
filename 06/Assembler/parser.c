@@ -169,10 +169,10 @@ char *_parser_dest(void)
 
     dest = strtok(current_command, "=");
 
-    if (dest == NULL) {
-        strncpy(data.dest, "null", strlen("null") + 1);
-    } else {
+    if (dest != NULL) {
         strncpy(data.dest, dest, strlen(dest) + 1);
+    } else {
+        strncpy(data.dest, "null", strlen("null") + 1);
     }
 
     free(current_command);
@@ -233,8 +233,7 @@ char *_parser_jump(void)
     if (jump != NULL) {
         strncpy(data.jump, jump, strlen(jump) + 1);
     } else {
-        printf("Error: jump field is not existing.\n");
-        data.jump[0] = '\0';
+        strncpy(data.jump, "null", strlen("null") + 1);
     }
 
     free(current_command);
