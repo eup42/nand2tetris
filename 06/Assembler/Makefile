@@ -1,3 +1,5 @@
+CC = gcc
+CFLAGS += -Wall -g
 
 TARGET = Assembler
 OBJ = assembler.o parser.o
@@ -6,7 +8,7 @@ OBJ = assembler.o parser.o
 all: $(TARGET)
 
 Assembler: $(OBJ)
-	$(CC) -o $(TARGET) $(OBJ)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ)
 
 .PHONY: clean
 clean:
