@@ -7,19 +7,39 @@
 
 #include <stdbool.h>
 
-void parserInit(char *name);
-bool hasMoreCommands(void);
-void advance(void);
-int  commandType(void);
-char *symbol(void);
-char *dest(void);
-char *comp(void);
-char *jump(void);
+extern void _parser_parserInit(char *name);
+extern bool _parser_hasMoreCommands(void);
+extern void _parser_advance(void);
+extern int  _parser_commandType(void);
+extern char *_parser_symbol(void);
+extern char *_parser_dest(void);
+extern char *_parser_comp(void);
+extern char *_parser_jump(void);
 
 enum commandType {
     A_COMMAND,
     C_COMMAND,
     L_COMMAND,
+};
+
+const static struct parser {
+    void (*parserInit)(char *);
+    bool (*hasMoreCommands)(void);
+    void (*advance)(void);
+    int  (*commandType)(void);
+    char *(*symbol)(void);
+    char *(*dest)(void);
+    char *(*comp)(void);
+    char *(*jump)(void);
+} parser = {
+    .parserInit      = _parser_parserInit,
+    .hasMoreCommands = _parser_hasMoreCommands,
+    .advance         = _parser_advance,
+    .commandType     = _parser_commandType,
+    .symbol          = _parser_symbol,
+    .dest            = _parser_dest,
+    .comp            = _parser_comp,
+    .jump            = _parser_jump,
 };
 
 #endif
