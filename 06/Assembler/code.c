@@ -5,6 +5,7 @@
 #include "code.h"
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 #define SIZE_OF_ARRAY(s)    (sizeof(s) / sizeof(s[0]))
 
@@ -63,6 +64,11 @@ uint16_t _code_dest(char *mnemonic)
     for (i = 0; i < SIZE_OF_ARRAY(tbl_dest); i++)
         if (!strcmp(mnemonic, tbl_dest[i].mnemonic)) break;
 
+    if (i == SIZE_OF_ARRAY(tbl_dest)) {
+        printf("Error: invalid mnemonic. [mnemonic]%s\n", mnemonic);
+        return 0;
+    }
+
     return tbl_dest[i].binary;
 }
 
@@ -73,6 +79,11 @@ uint16_t _code_comp(char *mnemonic)
     for (i = 0; i < SIZE_OF_ARRAY(tbl_comp); i++)
         if (!strcmp(mnemonic, tbl_comp[i].mnemonic)) break;
 
+    if (i == SIZE_OF_ARRAY(tbl_comp)) {
+        printf("Error: invalid mnemonic. [mnemonic]%s\n", mnemonic);
+        return 0;
+    }
+
     return tbl_comp[i].binary;
 }
 
@@ -82,6 +93,11 @@ uint16_t _code_jump(char *mnemonic)
 
     for (i = 0; i < SIZE_OF_ARRAY(tbl_jump); i++)
         if (!strcmp(mnemonic, tbl_jump[i].mnemonic)) break;
+
+    if (i == SIZE_OF_ARRAY(tbl_jump)) {
+        printf("Error: invalid mnemonic. [mnemonic]%s\n", mnemonic);
+        return 0;
+    }
 
     return tbl_jump[i].binary;
 }
