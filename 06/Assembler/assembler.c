@@ -92,6 +92,12 @@ int main(int argc, char *argv[])
         }
     }
 
+    /*
+     * Create output file
+     */
+
+    // Create output file
+    // output filename length = original length + 1: .asm -> .hack
     path = (char *)malloc(strlen(argv[1]) + 1 + 1);
     strncpy(path, argv[1], strlen(argv[1] + 1 + 1));
 
