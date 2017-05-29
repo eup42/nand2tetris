@@ -105,7 +105,12 @@ int main(int argc, char *argv[])
 
     fp = fopen(filename, "w");
 
-    parser.parserInit(argv[1]);
+    /*
+     * Second Path
+     */
+
+    parser.reset();
+    address = 16;
 
     while (parser.hasMoreCommands() == true) {
         parser.advance();
@@ -114,8 +119,15 @@ int main(int argc, char *argv[])
 
         switch (type) {
             case A_COMMAND:
-            case L_COMMAND:
-                binary = (uint16_t)atoi(parser.symbol());
+                if (isdigit(parser.symbol()[0])) {
+                    binary = (uint16_t)atoi(parser.symbol());
+                } else if (hash.contains(parser.symbol())) {
+                    binary = hash.getAddress(parser.symbol());
+                } else {
+                    hash.addEntry(parser.symbol(), address);
+                    address++;
+                    binary = hash.getAddress(parser.symbol());
+                }
                 break;
             case C_COMMAND:
                 binary = code.dest(parser.dest());
@@ -123,6 +135,7 @@ int main(int argc, char *argv[])
                 binary |= code.jump(parser.jump());
                 break;
             default:
+                continue;
                 break;
         }
 
