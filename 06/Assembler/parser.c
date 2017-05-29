@@ -110,6 +110,11 @@ void _parser_advance(void)
     data.current_line++;
 }
 
+void _parser_reset(void)
+{
+    data.current_line = -1;
+}
+
 int _parser_commandType(void)
 {
     char *current_command = data.lines[data.current_line];

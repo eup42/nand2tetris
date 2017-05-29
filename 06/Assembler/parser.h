@@ -10,6 +10,7 @@
 extern void _parser_parserInit(char *name);
 extern bool _parser_hasMoreCommands(void);
 extern void _parser_advance(void);
+extern void _parser_reset(void);
 extern int  _parser_commandType(void);
 extern char *_parser_symbol(void);
 extern char *_parser_dest(void);
@@ -26,6 +27,7 @@ const static struct parser {
     void (*parserInit)(char *);
     bool (*hasMoreCommands)(void);
     void (*advance)(void);
+    void (*reset)(void);
     int  (*commandType)(void);
     char *(*symbol)(void);
     char *(*dest)(void);
@@ -35,6 +37,7 @@ const static struct parser {
     .parserInit      = _parser_parserInit,
     .hasMoreCommands = _parser_hasMoreCommands,
     .advance         = _parser_advance,
+    .reset           = _parser_reset,
     .commandType     = _parser_commandType,
     .symbol          = _parser_symbol,
     .dest            = _parser_dest,
