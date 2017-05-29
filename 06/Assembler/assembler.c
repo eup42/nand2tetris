@@ -7,11 +7,43 @@
 #include <stdint.h>
 #include <string.h>
 #include <libgen.h>
+#include <ctype.h>
 
 #include "parser.h"
 #include "code.h"
+#include "symbol_table.h"
 
 #define SIZE_OF_ARRAY(s)    (sizeof(s) / sizeof(s[0]))
+
+const static struct {
+    char *symbol;
+    uint16_t address;
+} defined_symbol[23] = {
+    {"SP",     0x0000},
+    {"LCL",    0x0001},
+    {"ARG",    0x0002},
+    {"THIS",   0x0003},
+    {"THAT",   0x0004},
+    {"R0",     0x0000},
+    {"R1",     0x0001},
+    {"R2",     0x0002},
+    {"R3",     0x0003},
+    {"R4",     0x0004},
+    {"R5",     0x0005},
+    {"R6",     0x0006},
+    {"R7",     0x0007},
+    {"R8",     0x0008},
+    {"R9",     0x0009},
+    {"R10",    0x000a},
+    {"R11",    0x000b},
+    {"R12",    0x000c},
+    {"R13",    0x000d},
+    {"R14",    0x000e},
+    {"R15",    0x000f},
+    {"SCREEN", 0x4000},
+    {"KBD",    0x6000},
+};
+
 
 
 int main(int argc, char *argv[])
@@ -29,7 +61,14 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // output filename (original length + 1: .asm -> .hack)
+    /*
+     * Initialize Symbol Table
+     */
+
+    hash.initSymbolTable();
+    for (i = 0; i < SIZE_OF_ARRAY(defined_symbol); i++)
+        hash.addEntry(defined_symbol[i].symbol, defined_symbol[i].address);
+
     path = (char *)malloc(strlen(argv[1]) + 1 + 1);
     strncpy(path, argv[1], strlen(argv[1] + 1 + 1));
 
