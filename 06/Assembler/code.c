@@ -36,7 +36,7 @@ const static struct convert_table tbl_comp[] = {
     {"-D",  0b1110001111000000},
     {"-A",  0b1110110011000000},
     {"D+1", 0b1110011111000000},
-    {"A+1", 0b1110110111100000},
+    {"A+1", 0b1110110111000000},
     {"D-1", 0b1110001110000000},
     {"A-1", 0b1110110010000000},
     {"D+A", 0b1110000010000000},
@@ -75,7 +75,7 @@ uint16_t _code_dest(char *mnemonic)
         if (!strcmp(mnemonic, tbl_dest[i].mnemonic)) break;
 
     if (i == SIZE_OF_ARRAY(tbl_dest)) {
-        printf("Error: invalid mnemonic. [mnemonic]%s\n", mnemonic);
+        printf("Error: invalid dest mnemonic: %s\n", mnemonic);
         return 0;
     }
 
@@ -90,7 +90,7 @@ uint16_t _code_comp(char *mnemonic)
         if (!strcmp(mnemonic, tbl_comp[i].mnemonic)) break;
 
     if (i == SIZE_OF_ARRAY(tbl_comp)) {
-        printf("Error: invalid mnemonic. [mnemonic]%s\n", mnemonic);
+        printf("Error: invalid comp mnemonic: %s\n", mnemonic);
         return 0;
     }
 
@@ -105,7 +105,7 @@ uint16_t _code_jump(char *mnemonic)
         if (!strcmp(mnemonic, tbl_jump[i].mnemonic)) break;
 
     if (i == SIZE_OF_ARRAY(tbl_jump)) {
-        printf("Error: invalid mnemonic. [mnemonic]%s\n", mnemonic);
+        printf("Error: invalid jump mnemonic: %s\n", mnemonic);
         return 0;
     }
 
