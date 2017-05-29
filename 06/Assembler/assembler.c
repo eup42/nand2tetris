@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
     char *path;
     char *filename;
     FILE *fp;
+    uint16_t address = 0;
 
     if (argc != 2) {
         printf("Error: argument is invalid\n");
@@ -68,6 +69,28 @@ int main(int argc, char *argv[])
     hash.initSymbolTable();
     for (i = 0; i < SIZE_OF_ARRAY(defined_symbol); i++)
         hash.addEntry(defined_symbol[i].symbol, defined_symbol[i].address);
+
+    /*
+     * First Path
+     */
+    parser.parserInit(argv[1]);
+
+    while (parser.hasMoreCommands() == true) {
+        parser.advance();
+        type = parser.commandType();
+
+        switch (type) {
+            case A_COMMAND:
+            case C_COMMAND:
+                address++;
+                break;
+
+            case L_COMMAND:
+                if (!hash.contains(parser.symbol()))
+                    hash.addEntry(parser.symbol(), address);
+                break;
+        }
+    }
 
     path = (char *)malloc(strlen(argv[1]) + 1 + 1);
     strncpy(path, argv[1], strlen(argv[1] + 1 + 1));
