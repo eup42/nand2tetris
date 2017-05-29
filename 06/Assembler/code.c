@@ -14,7 +14,7 @@ struct convert_table {
     uint16_t binary;
 };
 
-const static struct convert_table tbl_dest[8] = {
+const static struct convert_table tbl_dest[] = {
     {"null", 0b1110000000000000},
     {"M",    0b1110000000001000},
     {"D",    0b1110000000010000},
@@ -25,7 +25,7 @@ const static struct convert_table tbl_dest[8] = {
     {"AMD",  0b1110000000111000},
 };
 
-const static struct convert_table tbl_comp[28] = {
+const static struct convert_table tbl_comp[] = {
     {"0",   0b1110101010000000},
     {"1",   0b1110111111000000},
     {"-1",  0b1110111010000000},
@@ -44,9 +44,19 @@ const static struct convert_table tbl_comp[28] = {
     {"A-D", 0b1110000111000000},
     {"D&A", 0b1110000000000000},
     {"D|A", 0b1110010101000000},
+    {"M",   0b1111110000000000},
+    {"!M",  0b1111110001000000},
+    {"-M",  0b1111110011000000},
+    {"M+1", 0b1111110111000000},
+    {"M-1", 0b1111110010000000},
+    {"D+M", 0b1111000010000000},
+    {"D-M", 0b1111010011000000},
+    {"M-D", 0b1111000111000000},
+    {"D&M", 0b1111000000000000},
+    {"D|M", 0b1111010101000000},
 };
 
-const static struct convert_table tbl_jump[8] = {
+const static struct convert_table tbl_jump[] = {
     {"null", 0b1110000000000000},
     {"JGT",  0b1110000000000001},
     {"JEQ",  0b1110000000000010},
