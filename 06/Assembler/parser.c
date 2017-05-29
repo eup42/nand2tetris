@@ -138,16 +138,18 @@ char *_parser_symbol(void)
     if (data.symbol == NULL) return NULL;
 
     if (current_command[0] == '@') {
-        strncpy(data.symbol, &current_command[1], len - 1 + 1);
+        strncpy(data.symbol, &current_command[1], len - 1);
+        data.symbol[len - 1] = '\0';
         return data.symbol;
 
     } else if (current_command[0] == '(') {
-        if (current_command[len] != ')') {
+        if (current_command[len - 1] != ')') {
             printf("Error: Command is not terminated as ')'. Command = %s\n",
                     current_command);
             return NULL;
         }
-        strncpy(data.symbol, &current_command[1], len - 2 + 1);
+        strncpy(data.symbol, &current_command[1], len - 2);
+        data.symbol[len - 2] = '\0';
         return data.symbol;
 
     } else {
@@ -169,7 +171,10 @@ char *_parser_dest(void)
     current_command = (char *)malloc(len + 1);
     strncpy(current_command, data.lines[data.current_line], len + 1);
 
-    dest = strtok(current_command, "=");
+    if (strstr(current_command, "="))
+        dest = strtok(current_command, "=");
+    else
+        dest = NULL;
 
     if (dest != NULL) {
         strncpy(data.dest, dest, strlen(dest) + 1);
@@ -196,14 +201,17 @@ char *_parser_comp(void)
     current_command = (char *)malloc(len + 1);
     strncpy(current_command, data.lines[data.current_line], len + 1);
 
-    dest = strtok(current_command, "=");
 
-    if (dest != NULL)
-        comp = strtok(NULL, "=");
-    else
+    if (strstr(current_command, "=")) {
+        strtok(current_command, "=;");
+        comp = strtok(NULL, "=;");
+    } else if (strstr(current_command, ";")) {
         comp = strtok(current_command, ";");
+    } else {
+        comp = NULL;
+    }
 
-    if (comp != NULL) {
+    if (comp) {
         strncpy(data.comp, comp, strlen(comp) + 1);
     } else {
         printf("Error: comp field is not existing.\n");
