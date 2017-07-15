@@ -15,13 +15,14 @@ enum commandType {
 
 typedef struct parser {
     char **lines;
+    int  max_line;
     int  current_line;
     char *current_symbol;
     char *current_dest;
     char *current_comp;
     char *current_jump;
 
-    void (*parserInit)(struct parser *, char *);
+    void (*init)(struct parser *, char *);
     bool (*hasMoreCommands)(struct parser *);
     void (*advance)(struct parser *);
     void (*reset)(struct parser *);
@@ -30,9 +31,10 @@ typedef struct parser {
     char *(*dest)(struct parser *);
     char *(*comp)(struct parser *);
     char *(*jump)(struct parser *);
+    void (*del)(struct parser *);
 } Parser;
 
-extern void _parser_parserInit(Parser *pThis, char *name);
+extern void _parser_init(Parser *pThis, char *name);
 extern bool _parser_hasMoreCommands(Parser *pThis);
 extern void _parser_advance(Parser *pThis);
 extern void _parser_reset(Parser *pThis);
@@ -41,6 +43,7 @@ extern char *_parser_symbol(Parser *pThis);
 extern char *_parser_dest(Parser *pThis);
 extern char *_parser_comp(Parser *pThis);
 extern char *_parser_jump(Parser *pThis);
+extern void _parser_delete(Parser *pThis);
 
 #define newParser() {       \
     .lines = NULL,          \
@@ -49,7 +52,7 @@ extern char *_parser_jump(Parser *pThis);
     .current_dest = NULL,   \
     .current_comp = NULL,   \
     .current_jump = NULL,   \
-    .parserInit = _parser_parserInit,           \
+    .init = _parser_init,           \
     .hasMoreCommands = _parser_hasMoreCommands, \
     .advance = _parser_advance,                 \
     .reset = _parser_reset,                     \
@@ -58,6 +61,7 @@ extern char *_parser_jump(Parser *pThis);
     .dest = _parser_dest,                       \
     .comp = _parser_comp,                       \
     .jump = _parser_jump,                       \
+    .del = _parser_delete,                      \
 }
 
 #endif

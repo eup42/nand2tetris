@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     /*
      * First Path
      */
-    parser.parserInit(&parser, argv[1]);
+    parser.init(&parser, argv[1]);
 
     while (parser.hasMoreCommands(&parser) == true) {
         parser.advance(&parser);
@@ -155,6 +155,8 @@ int main(int argc, char *argv[])
 
     free(path);
     fclose(fp);
+
+    parser.del(&parser);
 
     return 0;
 }

@@ -13,7 +13,7 @@
 #define LINE_BLOCK_SIZE 1024
 
 
-void _parser_parserInit(Parser *pThis, char *name)
+void _parser_init(Parser *pThis, char *name)
 {
     FILE *fp;
     char *buff;
@@ -78,6 +78,7 @@ void _parser_parserInit(Parser *pThis, char *name)
     }
 
     pThis->lines[line_num] = NULL;
+    pThis->max_line = LINE_BLOCK_SIZE * line_block_num;
 
     free(buff);
     fclose(fp);
@@ -231,3 +232,19 @@ char *_parser_jump(Parser *pThis)
     free(current_command);
     return pThis->current_jump;
 }
+
+void _parser_delete(Parser *pThis)
+{
+    int i;
+
+    for (i = 0; i < pThis->max_line; i++) {
+        free(pThis->lines[i]);
+    }
+
+    free(pThis->lines);
+    free(pThis->current_symbol);
+    free(pThis->current_comp);
+    free(pThis->current_dest);
+    free(pThis->current_jump);
+}
+
