@@ -48,6 +48,7 @@ const static struct {
 
 int main(int argc, char *argv[])
 {
+    Parser parser = newParser();
     enum commandType type;
     uint16_t binary;
     char binstr[] = "0000""0000""0000""0000";
@@ -73,11 +74,11 @@ int main(int argc, char *argv[])
     /*
      * First Path
      */
-    parser.parserInit(argv[1]);
+    parser.parserInit(&parser, argv[1]);
 
-    while (parser.hasMoreCommands() == true) {
-        parser.advance();
-        type = parser.commandType();
+    while (parser.hasMoreCommands(&parser) == true) {
+        parser.advance(&parser);
+        type = parser.commandType(&parser);
 
         switch (type) {
             case A_COMMAND:
@@ -86,8 +87,8 @@ int main(int argc, char *argv[])
                 break;
 
             case L_COMMAND:
-                if (!hash.contains(parser.symbol()))
-                    hash.addEntry(parser.symbol(), address);
+                if (!hash.contains(parser.symbol(&parser)))
+                    hash.addEntry(parser.symbol(&parser), address);
                 break;
         }
     }
@@ -115,30 +116,30 @@ int main(int argc, char *argv[])
      * Second Path
      */
 
-    parser.reset();
+    parser.reset(&parser);
     address = 16;
 
-    while (parser.hasMoreCommands() == true) {
-        parser.advance();
+    while (parser.hasMoreCommands(&parser) == true) {
+        parser.advance(&parser);
 
-        type = parser.commandType();
+        type = parser.commandType(&parser);
 
         switch (type) {
             case A_COMMAND:
-                if (isdigit(parser.symbol()[0])) {
-                    binary = (uint16_t)atoi(parser.symbol());
-                } else if (hash.contains(parser.symbol())) {
-                    binary = hash.getAddress(parser.symbol());
+                if (isdigit(parser.symbol(&parser)[0])) {
+                    binary = (uint16_t)atoi(parser.symbol(&parser));
+                } else if (hash.contains(parser.symbol(&parser))) {
+                    binary = hash.getAddress(parser.symbol(&parser));
                 } else {
-                    hash.addEntry(parser.symbol(), address);
+                    hash.addEntry(parser.symbol(&parser), address);
                     address++;
-                    binary = hash.getAddress(parser.symbol());
+                    binary = hash.getAddress(parser.symbol(&parser));
                 }
                 break;
             case C_COMMAND:
-                binary = code.dest(parser.dest());
-                binary |= code.comp(parser.comp());
-                binary |= code.jump(parser.jump());
+                binary = code.dest(parser.dest(&parser));
+                binary |= code.comp(parser.comp(&parser));
+                binary |= code.jump(parser.jump(&parser));
                 break;
             default:
                 continue;

@@ -12,25 +12,8 @@
 #define BUFF_BLOCK_SIZE 1024
 #define LINE_BLOCK_SIZE 1024
 
-struct data {
-    char **lines;
-    int  current_line;
-    char *symbol;
-    char *dest;
-    char *comp;
-    char *jump;
-};
 
-static struct data data = {
-    .lines = NULL,
-    .current_line = -1,
-    .symbol = NULL,
-    .dest = NULL,
-    .comp = NULL,
-    .jump = NULL,
-};
-
-void _parser_parserInit(char *name)
+void _parser_parserInit(Parser *pThis, char *name)
 {
     FILE *fp;
     char *buff;
@@ -49,7 +32,7 @@ void _parser_parserInit(char *name)
     }
 
     buff = (char *)malloc(sizeof(unsigned char) * BUFF_BLOCK_SIZE * buff_block_num);
-    data.lines = (char **)malloc(sizeof(char *)
+    pThis->lines = (char **)malloc(sizeof(char *)
                                     * LINE_BLOCK_SIZE * line_block_num);
 
     while ((ch = fgetc(fp)) != EOF) {
@@ -57,15 +40,15 @@ void _parser_parserInit(char *name)
             buff[indx] = '\0';
 
             if (strlen(buff) != 0) {
-                data.lines[line_num]
+                pThis->lines[line_num]
                     = (char *)malloc(sizeof(unsigned char) * strlen(buff) + 1);
-                strncpy(data.lines[line_num], buff, strlen(buff) + 1);
+                strncpy(pThis->lines[line_num], buff, strlen(buff) + 1);
 
                 line_num++;
                 if (line_num == LINE_BLOCK_SIZE * line_block_num) {
                     line_block_num++;
-                    data.lines
-                        = (char **)realloc(data.lines,
+                    pThis->lines
+                        = (char **)realloc(pThis->lines,
                             sizeof(char *)
                             * LINE_BLOCK_SIZE * line_block_num);
                 }
@@ -94,30 +77,30 @@ void _parser_parserInit(char *name)
         }
     }
 
-    data.lines[line_num] = NULL;
+    pThis->lines[line_num] = NULL;
 
     free(buff);
     fclose(fp);
 }
 
-bool _parser_hasMoreCommands(void)
+bool _parser_hasMoreCommands(Parser *pThis)
 {
-    return data.lines[data.current_line + 1] == NULL ? false : true;
+    return pThis->lines[pThis->current_line + 1] == NULL ? false : true;
 }
 
-void _parser_advance(void)
+void _parser_advance(Parser *pThis)
 {
-    data.current_line++;
+    pThis->current_line++;
 }
 
-void _parser_reset(void)
+void _parser_reset(Parser *pThis)
 {
-    data.current_line = -1;
+    pThis->current_line = -1;
 }
 
-int _parser_commandType(void)
+int _parser_commandType(Parser *pThis)
 {
-    char *current_command = data.lines[data.current_line];
+    char *current_command = pThis->lines[pThis->current_line];
 
     if (current_command[0] == '@')
         return A_COMMAND;
@@ -127,20 +110,20 @@ int _parser_commandType(void)
         return C_COMMAND;
 }
 
-char *_parser_symbol(void)
+char *_parser_symbol(Parser *pThis)
 {
-    char *current_command = data.lines[data.current_line];
+    char *current_command = pThis->lines[pThis->current_line];
     size_t len = strlen(current_command);
 
-    free(data.symbol);
-    data.symbol = (char *)malloc(sizeof(unsigned char) * len + 1);
+    free(pThis->current_symbol);
+    pThis->current_symbol = (char *)malloc(sizeof(unsigned char) * len + 1);
 
-    if (data.symbol == NULL) return NULL;
+    if (pThis->symbol == NULL) return NULL;
 
     if (current_command[0] == '@') {
-        strncpy(data.symbol, &current_command[1], len - 1);
-        data.symbol[len - 1] = '\0';
-        return data.symbol;
+        strncpy(pThis->current_symbol, &current_command[1], len - 1);
+        pThis->current_symbol[len - 1] = '\0';
+        return pThis->current_symbol;
 
     } else if (current_command[0] == '(') {
         if (current_command[len - 1] != ')') {
@@ -148,9 +131,9 @@ char *_parser_symbol(void)
                     current_command);
             return NULL;
         }
-        strncpy(data.symbol, &current_command[1], len - 2);
-        data.symbol[len - 2] = '\0';
-        return data.symbol;
+        strncpy(pThis->current_symbol, &current_command[1], len - 2);
+        pThis->current_symbol[len - 2] = '\0';
+        return pThis->current_symbol;
 
     } else {
         printf("Error: Command is invalid. Command = %s\n",  current_command);
@@ -158,18 +141,18 @@ char *_parser_symbol(void)
     }
 }
 
-char *_parser_dest(void)
+char *_parser_dest(Parser *pThis)
 {
     char *current_command;
-    size_t len = strlen(data.lines[data.current_line]);
+    size_t len = strlen(pThis->lines[pThis->current_line]);
     char *dest;
 
-    free(data.dest);
-    data.dest = (char *)malloc(sizeof(unsigned char) * len + 1);
+    free(pThis->current_dest);
+    pThis->current_dest = (char *)malloc(sizeof(unsigned char) * len + 1);
 
     //For using strtok
     current_command = (char *)malloc(len + 1);
-    strncpy(current_command, data.lines[data.current_line], len + 1);
+    strncpy(current_command, pThis->lines[pThis->current_line], len + 1);
 
     if (strstr(current_command, "="))
         dest = strtok(current_command, "=");
@@ -177,29 +160,28 @@ char *_parser_dest(void)
         dest = NULL;
 
     if (dest != NULL) {
-        strncpy(data.dest, dest, strlen(dest) + 1);
+        strncpy(pThis->current_dest, dest, strlen(dest) + 1);
     } else {
-        strncpy(data.dest, "null", strlen("null") + 1);
+        strncpy(pThis->current_dest, "null", strlen("null") + 1);
     }
 
     free(current_command);
-    return data.dest;
+    return pThis->current_dest;
 }
 
 
-char *_parser_comp(void)
+char *_parser_comp(Parser *pThis)
 {
-    char *current_command = data.lines[data.current_line];
+    char *current_command = pThis->lines[pThis->current_line];
     size_t len = strlen(current_command);
-    char *dest;
     char *comp;
 
-    free(data.comp);
-    data.comp = (char *)malloc(sizeof(unsigned char) * len + 1);
+    free(pThis->current_comp);
+    pThis->current_comp = (char *)malloc(sizeof(unsigned char) * len + 1);
 
     //For using strtok
     current_command = (char *)malloc(len + 1);
-    strncpy(current_command, data.lines[data.current_line], len + 1);
+    strncpy(current_command, pThis->lines[pThis->current_line], len + 1);
 
 
     if (strstr(current_command, "=")) {
@@ -212,40 +194,40 @@ char *_parser_comp(void)
     }
 
     if (comp) {
-        strncpy(data.comp, comp, strlen(comp) + 1);
+        strncpy(pThis->current_comp, comp, strlen(comp) + 1);
     } else {
         printf("Error: comp field is not existing.\n");
-        data.comp[0] = '\0';
+        pThis->current_comp[0] = '\0';
     }
 
     free(current_command);
-    return data.comp;
+    return pThis->current_comp;
 }
 
-char *_parser_jump(void)
+char *_parser_jump(Parser *pThis)
 {
-    char *current_command = data.lines[data.current_line];
+    char *current_command = pThis->lines[pThis->current_line];
     size_t len = strlen(current_command);
     char *comp = NULL;
     char *jump = NULL;
 
-    free(data.jump);
-    data.jump = (char *)malloc(sizeof(unsigned char) * len + 1);
+    free(pThis->current_jump);
+    pThis->current_jump = (char *)malloc(sizeof(unsigned char) * len + 1);
 
     //For using strtok
     current_command = (char *)malloc(len + 1);
-    strncpy(current_command, data.lines[data.current_line], len + 1);
+    strncpy(current_command, pThis->lines[pThis->current_line], len + 1);
 
     comp = strtok(current_command, ";");
 
     if (comp != NULL) jump = strtok(NULL, ";");
 
     if (jump != NULL) {
-        strncpy(data.jump, jump, strlen(jump) + 1);
+        strncpy(pThis->current_jump, jump, strlen(jump) + 1);
     } else {
-        strncpy(data.jump, "null", strlen("null") + 1);
+        strncpy(pThis->current_jump, "null", strlen("null") + 1);
     }
 
     free(current_command);
-    return data.jump;
+    return pThis->current_jump;
 }
