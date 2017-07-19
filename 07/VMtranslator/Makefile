@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS += -g -Wall
 
 TARGET = VMtranslator
-OBJ = parser.o
+OBJ = parser.o code_writer.o
 
 all: $(TARGET)
 
