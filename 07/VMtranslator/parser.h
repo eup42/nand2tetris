@@ -6,18 +6,7 @@
 #define _PARSER_H_
 
 #include <stdbool.h>
-
-enum commandType {
-    C_ARITHMETRIC,
-    C_PUSH,
-    C_POP,
-    C_LABEL,
-    C_GOTO,
-    C_IF,
-    C_FUNCTION,
-    C_RETURN,
-    C_CALL,
-};
+#include "command_type.h"
 
 typedef struct parser {
     char **lines;
