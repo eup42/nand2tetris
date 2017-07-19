@@ -99,7 +99,7 @@ void _parser_reset(Parser *pThis)
     pThis->current_line = -1;
 }
 
-int _parser_commandType(Parser *pThis)
+enum commandType _parser_commandType(Parser *pThis)
 {
     char *current_command = pThis->lines[pThis->current_line];
     static const char *list_arithmetric[] = {
@@ -113,10 +113,11 @@ int _parser_commandType(Parser *pThis)
     else if (hasCommandsInList(current_command, list_pop, SIZE_OF_ARRAY(list_pop)))
         return C_POP;
     else
-        return 0;
+        return C_PUSH;
 }
 
-char *_parser_arg1(Parser *pThis) {
+char *_parser_arg1(Parser *pThis)
+{
     char *current_command = pThis->lines[pThis->current_line];
     char *buf = (char *)malloc(sizeof(char) * strlen(current_command) + 1);
     char *arg1;
@@ -142,7 +143,8 @@ char *_parser_arg1(Parser *pThis) {
     return pThis->current_arg1;
 }
 
-int _parser_arg2(Parser *pThis) {
+int _parser_arg2(Parser *pThis)
+{
     char *current_command = pThis->lines[pThis->current_line];
     int cnt = 0;
 
@@ -192,7 +194,8 @@ static bool hasCommandsInList(char *command, const char **list, size_t size)
     return buf;
 }
 
-static void trimStartSpaces(char *str) {
+static void trimStartSpaces(char *str)
+{
     char *buf;
     char *orig = str;
 
@@ -209,7 +212,8 @@ static void trimStartSpaces(char *str) {
     return;
 }
 
-static void trimEndSpaces(char *str) {
+static void trimEndSpaces(char *str)
+{
     int i;
 
     for (i = strlen(str); i != 0; i--) {
@@ -223,7 +227,8 @@ static void trimEndSpaces(char *str) {
     return;
 }
 
-static void uniteBlanks(char *str) {
+static void uniteBlanks(char *str)
+{
     char *buf = (char *)malloc(sizeof(char) * strlen(str) + 1);
     char *orig = str;
 
@@ -238,7 +243,8 @@ static void uniteBlanks(char *str) {
     return;
 }
 
-static void trimComments(char *str) {
+static void trimComments(char *str)
+{
     while (*str != '\0') {
         if (*(str - 1) == '/' && *str == '/') {
             *(str - 1) = '\0';

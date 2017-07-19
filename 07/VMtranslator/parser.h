@@ -29,7 +29,7 @@ typedef struct parser {
     bool (*hasMoreCommands)(struct parser *);
     void (*advance)(struct parser *);
     void (*reset)(struct parser *);
-    int  (*commandType)(struct parser *);
+    enum commandType (*commandType)(struct parser *);
     char *(*arg1)(struct parser *);
     int  (*arg2)(struct parser *);
     void (*del)(struct parser *);
@@ -39,7 +39,7 @@ extern void _parser_init(Parser *pThis, char *name);
 extern bool _parser_hasMoreCommands(Parser *pThis);
 extern void _parser_advance(Parser *pThis);
 extern void _parser_reset(Parser *pThis);
-extern int  _parser_commandType(Parser *pThis);
+extern enum commandType  _parser_commandType(Parser *pThis);
 extern char *_parser_arg1(Parser *pThis);
 extern int  _parser_arg2(Parser *pThis);
 extern void _parser_delete(Parser *pThis);
