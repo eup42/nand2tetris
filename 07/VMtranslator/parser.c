@@ -46,10 +46,10 @@ void _parser_init(Parser *pThis, char *name)
         if (ch == '\n' || ch == '\r') {
             buff[indx] = '\0';
 
+            trimComments(buff);
             trimStartSpaces(buff);
             trimEndSpaces(buff);
             uniteBlanks(buff);
-            trimComments(buff);
 
             if (strlen(buff) != 0) {
                 pThis->lines[line_num]
