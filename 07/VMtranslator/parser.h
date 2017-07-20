@@ -10,7 +10,6 @@
 
 typedef struct parser {
     char **lines;
-    int  max_line;
     int  current_line;
     char *current_arg1;
 
@@ -35,7 +34,6 @@ extern void _parser_delete(Parser *pThis);
 
 #define newParser() {       \
     .lines = NULL,          \
-    .max_line = 0,          \
     .current_line = -1,     \
     .current_arg1 = NULL,   \
     .init = _parser_init,   \

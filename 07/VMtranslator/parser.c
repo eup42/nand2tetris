@@ -65,6 +65,7 @@ void _parser_init(Parser *pThis, char *name)
                             * LINE_BLOCK_SIZE * line_block_num);
                 }
             }
+            indx = 0;
             continue;
         }
 
@@ -78,7 +79,6 @@ void _parser_init(Parser *pThis, char *name)
     }
 
     pThis->lines[line_num] = NULL;
-    pThis->max_line = LINE_BLOCK_SIZE * line_block_num;
 
     free(buff);
     fclose(fp);
@@ -119,25 +119,32 @@ enum commandType _parser_commandType(Parser *pThis)
 char *_parser_arg1(Parser *pThis)
 {
     char *current_command = pThis->lines[pThis->current_line];
-    char *buf = (char *)malloc(sizeof(char) * strlen(current_command) + 1);
-    char *arg1;
+    char *buf, *arg1;
+    int i;
 
-    for (; *buf != '\0'; buf++) {
-        if (*buf == ' ') {
-            arg1 = buf + 1;
-            break;
+    buf = (char *)malloc(sizeof(char) * strlen(current_command) + 1);
+    strcpy(buf, current_command);
+
+    if (pThis->commandType(pThis) == C_ARITHMETRIC) {
+        arg1 = current_command;
+    } else {
+        for (i = 0; buf[i] != '\0'; i++) {
+            if (buf[i] == ' ') {
+                arg1 = &buf[i++] + 1;
+                break;
+            }
+        }
+
+        for (; buf[i] != '\0'; i++) {
+            if (buf[i] == ' ') {
+                buf[i] = '\0';
+                break;
+            }
         }
     }
 
-    for (; *buf != '\0'; buf++) {
-        if (*buf == ' ') {
-            *buf = '\0';
-            break;
-        }
-    }
-
-    pThis->current_arg1 = (char *)malloc(sizeof(char) * strlen(buf) + 1);
-    strcpy(pThis->current_arg1, buf);
+    pThis->current_arg1 = (char *)malloc(sizeof(char) * strlen(arg1) + 1);
+    strcpy(pThis->current_arg1, arg1);
 
     free(buf);
     return pThis->current_arg1;
@@ -160,7 +167,7 @@ void _parser_delete(Parser *pThis)
 {
     int i;
 
-    for (i = 0; i < pThis->max_line; i++) {
+    for (i = 0; pThis->lines[i] != NULL; i++) {
         free(pThis->lines[i]);
     }
 
@@ -191,7 +198,7 @@ static bool hasCommandsInList(char *command, const char **list, size_t size)
     }
 
     free(buf);
-    return buf;
+    return ret;
 }
 
 static void trimStartSpaces(char *str)
@@ -231,14 +238,15 @@ static void uniteBlanks(char *str)
 {
     char *buf = (char *)malloc(sizeof(char) * strlen(str) + 1);
     char *orig = str;
+    char *orig_buf = buf;
 
     while ((*buf++ = *str++) != '\0') {
         if (*(str - 1) == ' ')
             while (*str == ' ') str++;
     }
 
-    strcpy(orig, buf);
-    free(buf);
+    strcpy(orig, orig_buf);
+    free(orig_buf);
 
     return;
 }
