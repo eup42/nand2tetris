@@ -13,7 +13,7 @@ typedef struct CodeWriter {
     void (*init)(struct CodeWriter*, char *);
     void (*setFileName)(struct CodeWriter *, char *);
     void (*writeArithmetric)(struct CodeWriter *, char *);
-    void (*writePushPop)(struct CodeWriter *, enum commandType);
+    void (*writePushPop)(struct CodeWriter *, enum commandType, char *, int);
     void (*close)(struct CodeWriter *);
     void (*del)(struct CodeWriter *);
 } CodeWriter;
@@ -28,12 +28,13 @@ extern void _code_writer_del(CodeWriter *pThis);
 
 
 #define newCodeWriter() {                               \
+    .fp               = NULL,                           \
     .init             = _code_writer_init,              \
     .setFileName      = _code_writer_setFileName,       \
-    .writeArithmetric = _code_writer_writeArithmetric   \
-    .writePushPop     = _code_writer_writePushPop       \
-    .close            = _code_writer_close              \
-    .del              = _code_writer_del                \
+    .writeArithmetric = _code_writer_writeArithmetric,  \
+    .writePushPop     = _code_writer_writePushPop,      \
+    .close            = _code_writer_close,             \
+    .del              = _code_writer_del,               \
 }
 
 #endif

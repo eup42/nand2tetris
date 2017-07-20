@@ -29,6 +29,11 @@ void _code_writer_init(CodeWriter *pThis, char *filename)
     pThis->fp = fopen(filename, "w");
 }
 
+void _code_writer_setFileName(CodeWriter *pThis, char *filename)
+{
+    return;
+}
+
 void _code_writer_writeArithmetric(CodeWriter *pThis, char *command)
 {
     static const struct assemble_conv_list conv_list[]= {
