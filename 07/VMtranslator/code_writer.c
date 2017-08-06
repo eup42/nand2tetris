@@ -60,6 +60,8 @@ void _code_writer_writeArithmetric(CodeWriter *pThis, char *command)
 
 void _code_writer_writePushPop(CodeWriter *pThis, enum commandType command, char *segment, int index)
 {
+    if (segment == NULL) return;
+
     switch (command) {
         case C_PUSH:
             write_push_code(pThis, segment, index);

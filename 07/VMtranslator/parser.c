@@ -118,29 +118,28 @@ enum commandType _parser_commandType(Parser *pThis)
 
 char *_parser_arg1(Parser *pThis)
 {
-    char *current_command = pThis->lines[pThis->current_line];
+    const char *current_command = pThis->lines[pThis->current_line];
     char *buf, *arg1;
-    int i;
+    char *space;
 
     buf = (char *)malloc(sizeof(char) * strlen(current_command) + 1);
     strcpy(buf, current_command);
 
+    // get arg1 position and strings
     if (pThis->commandType(pThis) == C_ARITHMETRIC) {
-        arg1 = current_command;
-    } else {
-        for (i = 0; buf[i] != '\0'; i++) {
-            if (buf[i] == ' ') {
-                arg1 = &buf[i++] + 1;
-                break;
-            }
-        }
+        arg1 = buf;
+    } else if (pThis->commandType(pThis) == C_PUSH) {
+        if ((arg1 = strchr(buf, ' ')) ==  NULL)
+            return NULL;
 
-        for (; buf[i] != '\0'; i++) {
-            if (buf[i] == ' ') {
-                buf[i] = '\0';
-                break;
-            }
-        }
+        arg1 += 1;
+
+        if ((space = strchr(arg1, ' ')) == NULL)
+            return NULL;
+
+        *space = '\0';
+    } else {
+        return NULL;
     }
 
     pThis->current_arg1 = (char *)malloc(sizeof(char) * strlen(arg1) + 1);
@@ -153,14 +152,13 @@ char *_parser_arg1(Parser *pThis)
 int _parser_arg2(Parser *pThis)
 {
     char *current_command = pThis->lines[pThis->current_line];
-    int cnt = 0;
+    char *index;
 
-    for (; *current_command != '\0'; current_command++) {
-        if (*current_command == ' ') cnt++;
-        if (cnt == 2) break;
-    }
+    index = strrchr(current_command, ' ');
 
-    return atoi(current_command);
+    if (index == NULL) return 0;
+
+    return atoi(index + 1);
 }
 
 void _parser_delete(Parser *pThis)
