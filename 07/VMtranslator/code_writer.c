@@ -37,15 +37,15 @@ void _code_writer_setFileName(CodeWriter *pThis, char *filename)
 void _code_writer_writeArithmetric(CodeWriter *pThis, char *command)
 {
     static const struct assemble_conv_list conv_list[]= {
-        {"add", "M=M+D\n", write_binary_function_code},
-        {"sub", "M=M-D\n", write_binary_function_code},
-        {"neg", "M=-M\n",  write_unary_function_code},
-        {"eq",  "JEQ\n",   write_compare_function_code},
-        {"gt",  "JGT\n",   write_compare_function_code},
-        {"lt",  "JLT\n",   write_compare_function_code},
-        {"and", "M=M&D\n", write_binary_function_code},
-        {"or",  "M=M|D\n", write_binary_function_code},
-        {"not", "M=!M\n" , write_unary_function_code},
+        {"add", "M=M+D", write_binary_function_code},
+        {"sub", "M=M-D", write_binary_function_code},
+        {"neg", "M=-M",  write_unary_function_code},
+        {"eq",  "JEQ",   write_compare_function_code},
+        {"gt",  "JGT",   write_compare_function_code},
+        {"lt",  "JLT",   write_compare_function_code},
+        {"and", "M=M&D", write_binary_function_code},
+        {"or",  "M=M|D", write_binary_function_code},
+        {"not", "M=!M" , write_unary_function_code},
         {NULL,  NULL,      NULL},
     };
 
@@ -87,19 +87,20 @@ void _code_writer_del(CodeWriter *pThis)
 
 static void write_unary_function_code(CodeWriter *pThis, const char *assemble)
 {
-    char *template = "@SP\nA=M-1\n";
-
-    fprintf(pThis->fp, "%s%s", template, assemble); 
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "A=M-1\n");
+    fprintf(pThis->fp, "%s\n", assemble);
 
     return;
 }
 
 static void write_binary_function_code(CodeWriter *pThis, const char *assemble)
 {
-    char *template_start = "@SP\nA=M-1\nD=M\nA=A-1\n";
-    char *template_end   = "@SP\nM=M-1\n";
-
-    fprintf(pThis->fp, "%s%s%s", template_start, assemble, template_end); 
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "AM=M-1\n");         // --SP
+    fprintf(pThis->fp, "D=M\n");            // D = M[SP]
+    fprintf(pThis->fp, "A=A-1\n");
+    fprintf(pThis->fp, "%s\n", assemble);
 
     return;
 }
@@ -108,11 +109,25 @@ static void write_compare_function_code(CodeWriter *pThis, const char *assemble)
 {
     static unsigned long cnt = 0;
 
-    char *template_start = "@SP\nA=M-1\nD=M\nA=A-1\nM=M-D\n";
-    char *template_end   = "@SP\nM=M-1\n";
+    fprintf(pThis->fp, "@SP\n");                    // --SP
+    fprintf(pThis->fp, "AM=M-1\n");
+    fprintf(pThis->fp, "D=M\n");                    // D=M[SP]
+    fprintf(pThis->fp, "A=A-1\n");
+    fprintf(pThis->fp, "D=M-D\n");                  // M[SP-1] - D
+    fprintf(pThis->fp, "@TRUE%lu\n", cnt);
+    fprintf(pThis->fp, "D;%s\n", assemble);
+    fprintf(pThis->fp, "@SP\n");                    // if false
+    fprintf(pThis->fp, "A=M-1\n");
+    fprintf(pThis->fp, "M=0\n");                    // M[SP-1] = 0
+    fprintf(pThis->fp, "@CONTINUE%lu\n", cnt);      // go to end if
+    fprintf(pThis->fp, "0;JMP\n");
+    fprintf(pThis->fp, "(TRUE%lu)\n", cnt);         // if true
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "A=M-1\n");
+    fprintf(pThis->fp, "M=-1\n");                   // M[SP-1] = -1
+    fprintf(pThis->fp, "(CONTINUE%lu)\n", cnt);     // end if
 
-    fprintf(pThis->fp, "%s@TRUE%lu\nM;%s\nM=0\n@CONTINUE%lu\n0;JMP(TRUE%lu)\nM=-1\n(CONTINUE%lu)\n%s", template_start, cnt, assemble, cnt, cnt, cnt, template_end);
-
+    cnt++;
     return;
 }
 
@@ -136,9 +151,13 @@ static void write_push_code(CodeWriter *pThis, const char *segment, int index)
 
 static void write_push_constant(CodeWriter *pThis, int index)
 {
-    char *template_end   = "D=A\n@SP\nA=M\nM=D\n@SP\nM=M+1\n";
-
-    fprintf(pThis->fp, "@%d\n%s", index, template_end);
+    fprintf(pThis->fp, "@%d\n", index);
+    fprintf(pThis->fp, "D=A\n");            // D = index
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "A=M\n");
+    fprintf(pThis->fp, "M=D\n");            // M[SP] = D
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "M=M+1\n");          // ++SP
 
     return;
 }
