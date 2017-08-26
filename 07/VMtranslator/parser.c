@@ -107,13 +107,16 @@ enum commandType _parser_commandType(Parser *pThis)
         "lt",  "and", "or",  "not",
     };
     static const char *list_pop[] = {"pop"};
+    static const char *list_push[] = {"push"};
 
     if (hasCommandsInList(current_command, list_arithmetric, SIZE_OF_ARRAY(list_arithmetric)))
         return C_ARITHMETRIC;
     else if (hasCommandsInList(current_command, list_pop, SIZE_OF_ARRAY(list_pop)))
         return C_POP;
-    else
+    else if (hasCommandsInList(current_command, list_push, SIZE_OF_ARRAY(list_pop)))
         return C_PUSH;
+    else
+        return C_OTHER;
 }
 
 char *_parser_arg1(Parser *pThis)
@@ -128,7 +131,8 @@ char *_parser_arg1(Parser *pThis)
     // get arg1 position and strings
     if (pThis->commandType(pThis) == C_ARITHMETRIC) {
         arg1 = buf;
-    } else if (pThis->commandType(pThis) == C_PUSH) {
+    } else if (pThis->commandType(pThis) == C_PUSH ||
+               pThis->commandType(pThis) == C_POP     ) {
         if ((arg1 = strchr(buf, ' ')) ==  NULL)
             return NULL;
 

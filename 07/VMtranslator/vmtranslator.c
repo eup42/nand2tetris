@@ -91,7 +91,7 @@ int main(int argc, char **argv)
         if (strcmp(filename_list.filenames[i].extension, "vm")) continue;
         parser.init(&parser, filename_list.filenames[i].fullname);
 
-        code_writer.setFileName(&code_writer, filename_list.filenames[i].fullname);
+        code_writer.setFileName(&code_writer, filename_list.filenames[i].basename);
 
         while (parser.hasMoreCommands(&parser)) {
             parser.advance(&parser);
@@ -102,6 +102,9 @@ int main(int argc, char **argv)
                     break;
                 case C_PUSH:
                     code_writer.writePushPop(&code_writer, C_PUSH, parser.arg1(&parser), parser.arg2(&parser));
+                    break;
+                case C_POP:
+                    code_writer.writePushPop(&code_writer, C_POP, parser.arg1(&parser), parser.arg2(&parser));
                     break;
                 default:
                     break;

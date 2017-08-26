@@ -15,6 +15,7 @@ enum commandType {
     C_FUNCTION,
     C_RETURN,
     C_CALL,
+    C_OTHER,
 };
 
 #endif

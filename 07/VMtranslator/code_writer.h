@@ -10,6 +10,7 @@
 
 typedef struct CodeWriter {
     FILE *fp;
+    char *filename;
     void (*init)(struct CodeWriter*, char *);
     void (*setFileName)(struct CodeWriter *, char *);
     void (*writeArithmetric)(struct CodeWriter *, char *);
@@ -29,6 +30,7 @@ extern void _code_writer_del(CodeWriter *pThis);
 
 #define newCodeWriter() {                               \
     .fp               = NULL,                           \
+    .filename         = NULL,                           \
     .init             = _code_writer_init,              \
     .setFileName      = _code_writer_setFileName,       \
     .writeArithmetric = _code_writer_writeArithmetric,  \

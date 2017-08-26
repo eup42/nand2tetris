@@ -15,14 +15,24 @@ struct assemble_conv_list {
 
 struct push_pop_conv_list {
     char *segment;
-    void (*write_code_template)(CodeWriter *, int);
+    char *label;
+    void (*write_code_template)(CodeWriter *, const char *, int);
 };
 
 static void write_unary_function_code(CodeWriter *pThis, const char *assemble);
 static void write_binary_function_code(CodeWriter *pThis, const char *assemble);
 static void write_compare_function_code(CodeWriter *pThis, const char *assemble);
+
 static void write_push_code(CodeWriter *pThis, const char *segment, int index);
-static void write_push_constant(CodeWriter *pThis, int index);
+static void write_push_constant(CodeWriter *pThis, const char *regs, int index);
+static void write_push_with_base_regs(CodeWriter *pThis, const char *regs, int index);
+static void write_push_with_base_addr(CodeWriter *pThis, const char *addr, int index);
+static void write_push_static(CodeWriter *pThis, const char *regs, int index);
+
+static void write_pop_code(CodeWriter *pThis, const char *segment, int index);
+static void write_pop_with_base_regs(CodeWriter *pThis, const char *regs, int index);
+static void write_pop_with_base_addr(CodeWriter *pThis, const char *addr, int index);
+static void write_pop_static(CodeWriter *pThis, const char *addr, int index);
 
 void _code_writer_init(CodeWriter *pThis, char *filename)
 {
@@ -31,6 +41,11 @@ void _code_writer_init(CodeWriter *pThis, char *filename)
 
 void _code_writer_setFileName(CodeWriter *pThis, char *filename)
 {
+    free(pThis->filename);
+
+    pThis->filename = (char *)malloc(sizeof(char) * strlen(filename) + 1);
+
+    strcpy(pThis->filename, filename);
     return;
 }
 
@@ -67,6 +82,7 @@ void _code_writer_writePushPop(CodeWriter *pThis, enum commandType command, char
             write_push_code(pThis, segment, index);
             break;
         case C_POP:
+            write_pop_code(pThis, segment, index);
             break;
         default:
             break;
@@ -83,6 +99,7 @@ void _code_writer_close(CodeWriter *pThis)
 void _code_writer_del(CodeWriter *pThis)
 {
     pThis->fp = NULL;
+    free(pThis->filename);
     return;
 }
 
@@ -136,22 +153,29 @@ static void write_compare_function_code(CodeWriter *pThis, const char *assemble)
 static void write_push_code(CodeWriter *pThis, const char *segment, int index)
 {
     static const struct push_pop_conv_list conv_list[] = {
-        {"constant", write_push_constant},
-        {NULL,       NULL},
+        {"constant", NULL,   write_push_constant},
+        {"local",    "LCL",  write_push_with_base_regs},
+        {"argument", "ARG",  write_push_with_base_regs},
+        {"this",     "THIS", write_push_with_base_regs},
+        {"that",     "THAT", write_push_with_base_regs},
+        {"pointer",  "3",    write_push_with_base_addr},
+        {"temp",     "5",    write_push_with_base_addr},
+        {"static",   NULL,   write_push_static},
+        {NULL,       NULL,   NULL},
     };
 
     int i;
 
     for (i = 0; conv_list[i].segment != NULL; i++) {
         if (!strcmp(segment, conv_list[i].segment)) {
-            conv_list[i].write_code_template(pThis, index);
+            conv_list[i].write_code_template(pThis, conv_list[i].label, index);
         }
     }
 
     return;
 }
 
-static void write_push_constant(CodeWriter *pThis, int index)
+static void write_push_constant(CodeWriter *pThis, const char *regs, int index)
 {
     fprintf(pThis->fp, "@%d\n", index);
     fprintf(pThis->fp, "D=A\n");            // D = index
@@ -160,6 +184,116 @@ static void write_push_constant(CodeWriter *pThis, int index)
     fprintf(pThis->fp, "M=D\n");            // M[SP] = D
     fprintf(pThis->fp, "@SP\n");
     fprintf(pThis->fp, "M=M+1\n");          // ++SP
+
+    return;
+}
+
+static void write_push_with_base_regs(CodeWriter *pThis, const char *regs, int index)
+{
+    fprintf(pThis->fp, "@%s\n", regs);
+    fprintf(pThis->fp, "D=M\n");            // D = base
+    fprintf(pThis->fp, "@%d\n", index);
+    fprintf(pThis->fp, "A=D+A\n");          // A = base + index
+    fprintf(pThis->fp, "D=M\n");            // D = M[base + index]
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "A=M\n");
+    fprintf(pThis->fp, "M=D\n");            // M[SP] = D
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "M=M+1\n");          // ++SP
+
+    return;
+}
+
+static void write_push_with_base_addr(CodeWriter *pThis, const char *addr, int index)
+{
+    fprintf(pThis->fp, "@%d\n", atoi(addr) + index);
+    fprintf(pThis->fp, "D=M\n");            // D = M[3 + index]
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "A=M\n");
+    fprintf(pThis->fp, "M=D\n");            // M[SP] = D
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "M=M+1\n");          // ++SP
+
+    return;
+}
+
+static void write_push_static(CodeWriter *pThis, const char *addr, int index)
+{
+    fprintf(pThis->fp, "@%s.%d\n", pThis->filename, index);
+    fprintf(pThis->fp, "D=M\n");            // D = M[3 + index]
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "A=M\n");
+    fprintf(pThis->fp, "M=D\n");            // M[SP] = D
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "M=M+1\n");          // ++SP
+
+    return;
+}
+
+static void write_pop_code(CodeWriter *pThis, const char *segment, int index)
+{
+    static const struct push_pop_conv_list conv_list[] = {
+        {"local",    "LCL",  write_pop_with_base_regs},
+        {"argument", "ARG",  write_pop_with_base_regs},
+        {"this",     "THIS", write_pop_with_base_regs},
+        {"that",     "THAT", write_pop_with_base_regs},
+        {"pointer",  "3",    write_pop_with_base_addr},
+        {"temp",     "5",    write_pop_with_base_addr},
+        {"static",   NULL,   write_pop_static},
+        {NULL,       NULL,   NULL},
+    };
+
+    int i;
+
+    for (i = 0; conv_list[i].segment != NULL; i++) {
+        if (!strcmp(segment, conv_list[i].segment)) {
+            conv_list[i].write_code_template(pThis, conv_list[i].label, index);
+        }
+    }
+
+    return;
+}
+
+static void write_pop_with_base_regs(CodeWriter *pThis, const char *regs, int index)
+{
+    fprintf(pThis->fp, "@%s\n", regs);
+    fprintf(pThis->fp, "D=M\n");            // D = base
+    fprintf(pThis->fp, "@%d\n", index);
+    fprintf(pThis->fp, "D=D+A\n");          // D = base + index
+    fprintf(pThis->fp, "@R13\n");
+    fprintf(pThis->fp, "M=D\n");            // M[R13] = D
+
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "AM=M-1\n");         // --SP
+    fprintf(pThis->fp, "D=M\n");            // D = M[SP]
+
+    fprintf(pThis->fp, "@R13\n");
+    fprintf(pThis->fp, "A=M\n");            // A = base + index
+    fprintf(pThis->fp, "M=D\n");            // M[base + index] = D
+
+    return;
+}
+
+static void write_pop_with_base_addr(CodeWriter *pThis, const char *addr, int index)
+{
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "AM=M-1\n");         // --SP
+    fprintf(pThis->fp, "D=M\n");            // D = M[SP]
+
+    fprintf(pThis->fp, "@%d\n", atoi(addr) + index);
+    fprintf(pThis->fp, "M=D\n");            // M[base + index] = D
+
+    return;
+}
+
+static void write_pop_static(CodeWriter *pThis, const char *addr, int index)
+{
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "AM=M-1\n");         // --SP
+    fprintf(pThis->fp, "D=M\n");            // D = M[SP]
+
+    fprintf(pThis->fp, "@%s.%d\n", pThis->filename, index);
+    fprintf(pThis->fp, "M=D\n");            // M[base + index] = D
 
     return;
 }
