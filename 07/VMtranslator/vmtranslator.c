@@ -106,6 +106,15 @@ int main(int argc, char **argv)
                 case C_POP:
                     code_writer.writePushPop(&code_writer, C_POP, parser.arg1(&parser), parser.arg2(&parser));
                     break;
+                case C_LABEL:
+                    code_writer.writeLabel(&code_writer, parser.arg1(&parser));
+                    break;
+                case C_GOTO:
+                    code_writer.writeGoto(&code_writer, parser.arg1(&parser));
+                    break;
+                case C_IF:
+                    code_writer.writeIf(&code_writer, parser.arg1(&parser));
+                    break;
                 default:
                     break;
             }

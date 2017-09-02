@@ -91,6 +91,48 @@ void _code_writer_writePushPop(CodeWriter *pThis, enum commandType command, char
     return;
 }
 
+
+extern void _code_writer_writeLabel(CodeWriter *pThis, char *label)
+{
+    char *func = "null";
+
+    if (pThis->funcname)
+        func = pThis->funcname;
+
+    fprintf(pThis->fp, "(%s$%s)\n", func, label);
+
+    return;
+}
+
+extern void _code_writer_writeGoto(CodeWriter *pThis, char *label)
+{
+    char *func = "null";
+
+    if (pThis->funcname)
+        func = pThis->funcname;
+
+    fprintf(pThis->fp, "@%s$%s\n", func, label);
+    fprintf(pThis->fp, "0;JMP\n");
+
+    return;
+}
+
+extern void _code_writer_writeIf(CodeWriter *pThis, char *label)
+{
+    char *func = "null";
+
+    if (pThis->funcname)
+        func = pThis->funcname;
+
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "AM=M-1\n");
+    fprintf(pThis->fp, "D=M\n");
+    fprintf(pThis->fp, "@%s$%s\n", func, label);
+    fprintf(pThis->fp, "D;JNE\n");
+
+    return;
+}
+
 void _code_writer_close(CodeWriter *pThis)
 {
     fclose(pThis->fp);

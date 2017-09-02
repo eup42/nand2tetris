@@ -108,6 +108,9 @@ enum commandType _parser_commandType(Parser *pThis)
     };
     static const char *list_pop[] = {"pop"};
     static const char *list_push[] = {"push"};
+    static const char *list_label[] = {"label"};
+    static const char *list_goto[] = {"goto"};
+    static const char *list_if_goto[] = {"if-goto"};
 
     if (hasCommandsInList(current_command, list_arithmetric, SIZE_OF_ARRAY(list_arithmetric)))
         return C_ARITHMETRIC;
@@ -115,6 +118,12 @@ enum commandType _parser_commandType(Parser *pThis)
         return C_POP;
     else if (hasCommandsInList(current_command, list_push, SIZE_OF_ARRAY(list_pop)))
         return C_PUSH;
+    else if (hasCommandsInList(current_command, list_label, SIZE_OF_ARRAY(list_label)))
+        return C_LABEL;
+    else if (hasCommandsInList(current_command, list_goto, SIZE_OF_ARRAY(list_goto)))
+        return C_GOTO;
+    else if (hasCommandsInList(current_command, list_if_goto, SIZE_OF_ARRAY(list_if_goto)))
+        return C_IF;
     else
         return C_OTHER;
 }
@@ -131,19 +140,14 @@ char *_parser_arg1(Parser *pThis)
     // get arg1 position and strings
     if (pThis->commandType(pThis) == C_ARITHMETRIC) {
         arg1 = buf;
-    } else if (pThis->commandType(pThis) == C_PUSH ||
-               pThis->commandType(pThis) == C_POP     ) {
+    } else {
         if ((arg1 = strchr(buf, ' ')) ==  NULL)
             return NULL;
 
         arg1 += 1;
 
-        if ((space = strchr(arg1, ' ')) == NULL)
-            return NULL;
-
-        *space = '\0';
-    } else {
-        return NULL;
+        // if there is space after arg1
+        if ((space = strchr(arg1, ' ')) != NULL) *space = '\0';
     }
 
     pThis->current_arg1 = (char *)malloc(sizeof(char) * strlen(arg1) + 1);
