@@ -133,6 +133,83 @@ extern void _code_writer_writeIf(CodeWriter *pThis, char *label)
     return;
 }
 
+void _code_writer_writeReturn(CodeWriter *pThis)
+{
+    int i;
+
+    // R13: FRAME
+    // R14: RET
+
+    fprintf(pThis->fp, "@LCL\n");
+    fprintf(pThis->fp, "D=M\n");
+    fprintf(pThis->fp, "@R13\n");
+    fprintf(pThis->fp, "M=D\n");        // FRAME = LCL
+
+    for (i = 5; i > 0; i--) {
+        fprintf(pThis->fp, "D=D-1\n");
+    }
+    fprintf(pThis->fp, "A=D\n");
+    fprintf(pThis->fp, "D=M\n");
+    fprintf(pThis->fp, "@R14\n");
+    fprintf(pThis->fp, "M=D\n");        // RET = *(FRAME - 5)
+
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "AM=M-1\n");
+    fprintf(pThis->fp, "D=M\n");
+    fprintf(pThis->fp, "@ARG\n");
+    fprintf(pThis->fp, "A=M\n");
+    fprintf(pThis->fp, "M=D\n");        // *ARG = pop()
+
+    fprintf(pThis->fp, "@ARG\n");
+    fprintf(pThis->fp, "D=M\n");
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "M=D+1\n");      // SP = ARG + 1
+
+    fprintf(pThis->fp, "@R13\n");
+    fprintf(pThis->fp, "AM=M-1\n");
+    fprintf(pThis->fp, "D=M\n");
+    fprintf(pThis->fp, "@THAT\n");
+    fprintf(pThis->fp, "M=D\n");        // THAT = *(FRAME - 1)
+
+    fprintf(pThis->fp, "@R13\n");
+    fprintf(pThis->fp, "AM=M-1\n");
+    fprintf(pThis->fp, "D=M\n");
+    fprintf(pThis->fp, "@THIS\n");
+    fprintf(pThis->fp, "M=D\n");        // THIS = *(FRAME - 2)
+
+    fprintf(pThis->fp, "@R13\n");
+    fprintf(pThis->fp, "AM=M-1\n");
+    fprintf(pThis->fp, "D=M\n");
+    fprintf(pThis->fp, "@ARG\n");
+    fprintf(pThis->fp, "M=D\n");        // ARG = *(FRAME - 3)
+
+    fprintf(pThis->fp, "@R13\n");
+    fprintf(pThis->fp, "AM=M-1\n");
+    fprintf(pThis->fp, "D=M\n");
+    fprintf(pThis->fp, "@LCL\n");
+    fprintf(pThis->fp, "M=D\n");        // LCL = *(FRAME - 4)
+
+    fprintf(pThis->fp, "@R14\n");
+    fprintf(pThis->fp, "A=M\n");
+    fprintf(pThis->fp, "0;JMP\n");      // goto RET
+}
+
+void _code_writer_writeFunction(CodeWriter *pThis, char *functionName, int numArgs)
+{
+    int i;
+
+    fprintf(pThis->fp, "(%s)\n", functionName);     // (f)
+    for (i = 0; i < numArgs; i++) {
+        fprintf(pThis->fp, "@SP\n");
+        fprintf(pThis->fp, "A=M\n");
+        fprintf(pThis->fp, "M=0\n");                // M[SP] = 0
+        fprintf(pThis->fp, "@SP\n");
+        fprintf(pThis->fp, "M=M+1\n");              // ++SP
+    }
+
+    return;
+}
+
 void _code_writer_close(CodeWriter *pThis)
 {
     fclose(pThis->fp);

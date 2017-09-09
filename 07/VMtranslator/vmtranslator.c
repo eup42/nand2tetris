@@ -115,6 +115,12 @@ int main(int argc, char **argv)
                 case C_IF:
                     code_writer.writeIf(&code_writer, parser.arg1(&parser));
                     break;
+                case C_FUNCTION:
+                    code_writer.writeFunction(&code_writer, parser.arg1(&parser), parser.arg2(&parser));
+                    break;
+                case C_RETURN:
+                    code_writer.writeReturn(&code_writer);
+                    break;
                 default:
                     break;
             }
