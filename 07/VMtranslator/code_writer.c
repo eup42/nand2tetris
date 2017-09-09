@@ -92,7 +92,7 @@ void _code_writer_writePushPop(CodeWriter *pThis, enum commandType command, char
 }
 
 
-extern void _code_writer_writeLabel(CodeWriter *pThis, char *label)
+void _code_writer_writeLabel(CodeWriter *pThis, char *label)
 {
     char *func = "null";
 
@@ -104,7 +104,7 @@ extern void _code_writer_writeLabel(CodeWriter *pThis, char *label)
     return;
 }
 
-extern void _code_writer_writeGoto(CodeWriter *pThis, char *label)
+void _code_writer_writeGoto(CodeWriter *pThis, char *label)
 {
     char *func = "null";
 
@@ -117,7 +117,7 @@ extern void _code_writer_writeGoto(CodeWriter *pThis, char *label)
     return;
 }
 
-extern void _code_writer_writeIf(CodeWriter *pThis, char *label)
+void _code_writer_writeIf(CodeWriter *pThis, char *label)
 {
     char *func = "null";
 
