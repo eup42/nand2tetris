@@ -113,6 +113,7 @@ enum commandType _parser_commandType(Parser *pThis)
     static const char *list_if_goto[] = {"if-goto"};
     static const char *list_function[] = {"function"};
     static const char *list_return[] = {"return"};
+    static const char *list_call[] = {"call"};
 
     if (hasCommandsInList(current_command, list_arithmetric, SIZE_OF_ARRAY(list_arithmetric)))
         return C_ARITHMETRIC;
@@ -130,6 +131,8 @@ enum commandType _parser_commandType(Parser *pThis)
         return C_FUNCTION;
     else if (hasCommandsInList(current_command, list_return, SIZE_OF_ARRAY(list_return)))
         return C_RETURN;
+    else if (hasCommandsInList(current_command, list_call, SIZE_OF_ARRAY(list_call)))
+        return C_CALL;
     else
         return C_OTHER;
 }

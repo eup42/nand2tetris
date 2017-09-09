@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define SIZE_OF_ARRAY(a) ((sizeof(a)) / (sizeof(a[0])))
+
 struct assemble_conv_list {
     char *command;
     char *assemble;
@@ -129,6 +131,61 @@ void _code_writer_writeIf(CodeWriter *pThis, char *label)
     fprintf(pThis->fp, "D=M\n");
     fprintf(pThis->fp, "@%s$%s\n", func, label);
     fprintf(pThis->fp, "D;JNE\n");
+
+    return;
+}
+
+void _code_writer_writeInit(CodeWriter *pThis)
+{
+    fprintf(pThis->fp, "@256\n");                   // SP = 256
+    fprintf(pThis->fp, "D=A\n");
+    fprintf(pThis->fp, "@SP\n");
+    fprintf(pThis->fp, "M=D\n");
+
+    _code_writer_writeCall(pThis, "Sys.init", 0);   //call Sys.init
+}
+
+void _code_writer_writeCall(CodeWriter *pThis, char *functionName, int numArgs)
+{
+    char *push_list[] = {"return-address", "LCL", "ARG", "THIS", "THAT"};
+    static int ret_num = 0;
+    int i;
+
+    for (i = 0; i < SIZE_OF_ARRAY(push_list); i++) {                // each label in push_list push to stack
+        if (!strcmp(push_list[i], "return-address")) {
+            fprintf(pThis->fp, "@%s%d\n", push_list[i], ret_num);
+            fprintf(pThis->fp, "D=A\n");
+        } else {
+            fprintf(pThis->fp, "@%s\n", push_list[i]);
+            fprintf(pThis->fp, "D=M\n");
+        }
+
+        fprintf(pThis->fp, "@SP\n");
+        fprintf(pThis->fp, "A=M\n");
+        fprintf(pThis->fp, "M=D\n");
+        fprintf(pThis->fp, "@SP\n");
+        fprintf(pThis->fp, "M=M+1\n");
+    }
+
+    fprintf(pThis->fp, "@SP\n");                                    // ARG = SP - n - 5
+    fprintf(pThis->fp, "D=M\n");
+    for (i = 0; i < numArgs + 5; i++) {
+        fprintf(pThis->fp, "D=D-1\n");
+    }
+    fprintf(pThis->fp, "@ARG\n");
+    fprintf(pThis->fp, "M=D\n");
+
+    fprintf(pThis->fp, "@SP\n");                                    // LCL = SP
+    fprintf(pThis->fp, "D=M\n");
+    fprintf(pThis->fp, "@LCL\n");
+    fprintf(pThis->fp, "M=D\n");
+
+    fprintf(pThis->fp, "@%s\n", functionName);                      // goto f
+    fprintf(pThis->fp, "0;JMP\n");
+
+    fprintf(pThis->fp, "(return-address%d)\n", ret_num);            // (return-addressXX)
+
+    ret_num++;
 
     return;
 }

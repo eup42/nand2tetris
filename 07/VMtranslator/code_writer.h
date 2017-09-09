@@ -19,6 +19,8 @@ typedef struct CodeWriter {
     void (*writeLabel)(struct CodeWriter *, char *label);
     void (*writeGoto)(struct CodeWriter *, char *label);
     void (*writeIf)(struct CodeWriter *, char *label);
+    void (*writeInit)(struct CodeWriter *pThis);
+    void (*writeCall)(struct CodeWriter *pThis, char *functionName, int numArgs);
     void (*writeReturn)(struct CodeWriter *pThis);
     void (*writeFunction)(struct CodeWriter *pThis, char *functionName, int numArgs);
     void (*close)(struct CodeWriter *);
@@ -33,6 +35,8 @@ extern void _code_writer_writePushPop(CodeWriter *pThis, enum commandType comman
 extern void _code_writer_writeLabel(CodeWriter *pThis, char *label);
 extern void _code_writer_writeGoto(CodeWriter *pThis, char *label);
 extern void _code_writer_writeIf(CodeWriter *pThis, char *label);
+extern void _code_writer_writeInit(CodeWriter *pThis);
+extern void _code_writer_writeCall(CodeWriter *pThis, char *functionName, int numArgs);
 extern void _code_writer_writeReturn(CodeWriter *pThis);
 extern void _code_writer_writeFunction(CodeWriter *pThis, char *functionName, int numArgs);
 extern void _code_writer_close(CodeWriter *pThis);
@@ -50,6 +54,8 @@ extern void _code_writer_del(CodeWriter *pThis);
     .writeLabel       = _code_writer_writeLabel,        \
     .writeGoto        = _code_writer_writeGoto,         \
     .writeIf          = _code_writer_writeIf,           \
+    .writeInit        = _code_writer_writeInit,         \
+    .writeCall        = _code_writer_writeCall,         \
     .writeReturn      = _code_writer_writeReturn,       \
     .writeFunction    = _code_writer_writeFunction,     \
     .close            = _code_writer_close,             \

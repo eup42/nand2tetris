@@ -83,6 +83,7 @@ int main(int argc, char **argv)
     strcpy(buf2, base);
     strcat(buf2, ".asm");
     code_writer.init(&code_writer, buf2);
+    code_writer.writeInit(&code_writer);
     free(buf1);
     free(buf2);
 
@@ -120,6 +121,9 @@ int main(int argc, char **argv)
                     break;
                 case C_RETURN:
                     code_writer.writeReturn(&code_writer);
+                    break;
+                case C_CALL:
+                    code_writer.writeCall(&code_writer, parser.arg1(&parser), parser.arg2(&parser));
                     break;
                 default:
                     break;
