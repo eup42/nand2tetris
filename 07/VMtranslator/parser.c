@@ -38,6 +38,10 @@ void _parser_init(Parser *pThis, char *name)
         exit errno;
     }
 
+    pThis->lines        = NULL;
+    pThis->current_arg1 = NULL;
+    pThis->current_line = -1;
+
     buff = (char *)malloc(sizeof(unsigned char) * BUFF_BLOCK_SIZE * buff_block_num);
     pThis->lines = (char **)malloc(sizeof(char *)
                                     * LINE_BLOCK_SIZE * line_block_num);
@@ -184,10 +188,14 @@ void _parser_delete(Parser *pThis)
 
     for (i = 0; pThis->lines[i] != NULL; i++) {
         free(pThis->lines[i]);
+        pThis->lines[i] = NULL;
     }
 
     free(pThis->lines);
+    pThis->lines = NULL;
     free(pThis->current_arg1);
+    pThis->current_arg1 = NULL;
+    pThis->current_line = -1;
 }
 
 

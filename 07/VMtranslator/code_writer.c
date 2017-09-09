@@ -255,6 +255,8 @@ void _code_writer_writeFunction(CodeWriter *pThis, char *functionName, int numAr
 {
     int i;
 
+    pThis->funcname = functionName;
+
     fprintf(pThis->fp, "(%s)\n", functionName);     // (f)
     for (i = 0; i < numArgs; i++) {
         fprintf(pThis->fp, "@SP\n");
