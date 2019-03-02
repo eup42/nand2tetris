@@ -7,6 +7,7 @@
 
 #include "jack_tokenizer.h"
 #include "symbol_table.h"
+#include "vm_writer.h"
 #include <stdio.h>
 
 enum id_status {
@@ -18,7 +19,10 @@ enum id_status {
 typedef struct compilation_engine {
     JackTokenizer tokenizer;
     SymbolTable   symbols;
+    VMWriter      writer;
     FILE *fp;
+    char *class_name;
+    unsigned int nArgs;
 
     void (*init)(struct compilation_engine *, char *, char *);
     void (*compileClass)(struct compilation_engine *);
@@ -60,6 +64,7 @@ extern void _compilation_engine_del(CompilationEngine *pThis);
 #define newCompilationEngine() {                                            \
     .tokenizer              = newJackTokenizer(),                           \
     .symbols                = newSymbolTable(),                             \
+    .writer                 = newVMWriter(),                                \
     .fp                     = NULL,                                         \
     .init                   = _compilation_engine_init,                     \
     .compileClass           = _compilation_engine_compileClass,             \
@@ -67,7 +72,7 @@ extern void _compilation_engine_del(CompilationEngine *pThis);
     .compileSubroutine      = _compilation_engine_compileSubroutine,        \
     .compileParameterlist   = _compilation_engine_compileParameterlist,     \
     .compileVarDec          = _compilation_engine_compileVarDec,            \
-    .compileStatements      = _compilation_engine_compileStatements,         \
+    .compileStatements      = _compilation_engine_compileStatements,        \
     .compileDo              = _compilation_engine_compileDo,                \
     .compileLet             = _compilation_engine_compileLet,               \
     .compileWhile           = _compilation_engine_compileWhile,             \

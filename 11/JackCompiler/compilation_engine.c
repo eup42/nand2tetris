@@ -16,45 +16,54 @@
 
 static bool write_keyword(CompilationEngine *pThis, enum KeyWord keyword);
 static bool write_symbol(CompilationEngine *pThis, char *symbol);
-static bool write_integerConstant(CompilationEngine *pThis);
 static bool write_stringConstant(CompilationEngine *pThis);
 static bool write_identifier(CompilationEngine *pThis, enum id_status status, char *type, enum kind kind);
 static bool is_type(JackTokenizer *pThis);
 static bool is_begin_of_term(JackTokenizer *pThis);
 static bool is_op(JackTokenizer *pThis);
 static bool is_begin_of_expression(JackTokenizer *pThis);
+static void advance(JackTokenizer *p_tokenizer);
+
 
 void _compilation_engine_init(CompilationEngine *pThis, char *istream, char *ostream)
 {
-    JackTokenizer *p_tokenizer = &(pThis->tokenizer);
-
-    p_tokenizer->init(p_tokenizer, istream);
+    pThis->tokenizer.init(&pThis->tokenizer, istream);
     pThis->symbols.init(&pThis->symbols);
+    pThis->writer.init(&pThis->writer, ostream);
 
-    pThis->fp = fopen(ostream, "w");
-
-    if (pThis->fp == NULL) {
-        fprintf(stderr, "%s %s() : %s\n", __FILE__, __FUNCTION__, strerror(errno));
-        exit errno;
-    }
+    pThis->class_name = malloc(sizeof(char) * 1024);
 }
-
 
 
 void _compilation_engine_compileClass(CompilationEngine *pThis)
 {
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
 
-    fprintf(pThis->fp, "<class>\n");
-
     // 'class'
-    if (!write_keyword(pThis, CLASS)) return;
+    if (!((p_tokenizer->tokenType(p_tokenizer) == KEYWORD)
+                && (p_tokenizer->keyWord(p_tokenizer) == CLASS))) {
+        TOKEN_ERR("class");
+        exit (0);
+    }
+    advance(p_tokenizer);
+
 
     // className
-    if (!write_identifier(pThis, DEFINED, NULL, ID_CLASS)) return;
+    if (!(p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER)) {
+        TOKEN_ERR("identifier");
+        exit (0);
+    }
+    strcpy(pThis->class_name, p_tokenizer->current_token);
+    advance(p_tokenizer);
+
 
     // '{'
-    if (!write_symbol(pThis, "{")) return;
+    if (!(p_tokenizer->tokenType(p_tokenizer) == SYMBOL && !strcmp(p_tokenizer->symbol(p_tokenizer), "{"))) {
+        TOKEN_ERR("{");
+        exit (0);
+    }
+    advance(p_tokenizer);
+
 
     // classVarDec*
     while ((p_tokenizer->tokenType(p_tokenizer) == KEYWORD) &&
@@ -70,9 +79,11 @@ void _compilation_engine_compileClass(CompilationEngine *pThis)
         pThis->compileSubroutine(pThis);
     }
 
-    if (!write_symbol(pThis, "}")) return;
-
-    fprintf(pThis->fp, "</class>\n");
+    // '}'
+    if (!(p_tokenizer->tokenType(p_tokenizer) == SYMBOL && !strcmp(p_tokenizer->symbol(p_tokenizer), "}"))) {
+        TOKEN_ERR("}");
+        exit (0);
+    }
 }
 
 void _compilation_engine_compileClassVarDec(CompilationEngine *pThis)
@@ -83,59 +94,76 @@ void _compilation_engine_compileClassVarDec(CompilationEngine *pThis)
 
     type = malloc(sizeof(char) * 1024);
 
-    fprintf(pThis->fp, "<classVarDec>\n");
-
     // ('static' | 'field')
+    if (!(p_tokenizer->tokenType(p_tokenizer) == KEYWORD)) {
+        TOKEN_ERR("keyword");
+        exit (0);
+    }
     switch (p_tokenizer->keyWord(p_tokenizer)) {
         case STATIC:
-            if (!write_keyword(pThis, STATIC)) return;
             kind = ID_STATIC;
+            advance(p_tokenizer);
             break;
         case FIELD:
-            if (!write_keyword(pThis, FIELD)) return;
             kind = ID_FIELD;
+            advance(p_tokenizer);
             break;
         default:
             TOKEN_ERR("'static' or 'field'");
     }
 
     // type
-    switch (p_tokenizer->keyWord(p_tokenizer)) {
-        case INT:
-            if (!write_keyword(pThis, INT)) return;
-            strcpy(type, "int");
-            break;
-        case CHAR:
-            if (!write_keyword(pThis, CHAR)) return;
-            strcpy(type, "char");
-            break;
-        case BOOLEAN:
-            if (!write_keyword(pThis, BOOLEAN)) return;
-            strcpy(type, "boolean");
-            break;
-        default:
-            if (p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER) {
-                strcpy(type, p_tokenizer->current_token);
-                write_identifier(pThis, USED, NULL, ID_CLASS);
-            } else {
-                TOKEN_ERR("'int' or 'char' or 'boolean' or 'identifier'");
-            }
+    if (p_tokenizer->tokenType(p_tokenizer) == KEYWORD) {
+        switch (p_tokenizer->keyWord(p_tokenizer)) {
+            case INT:
+                strcpy(type, "int");
+                break;
+            case CHAR:
+                strcpy(type, "char");
+                break;
+            case BOOLEAN:
+                strcpy(type, "boolean");
+                break;
+            default:
+                TOKEN_ERR("'int' or 'char' or 'boolean'");
+                exit (0);
+        }
+    } else if (p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER) {
+        strcpy(type, p_tokenizer->current_token);
+    } else {
+        TOKEN_ERR("'int' or 'char' or 'boolean' or 'identifier'");
+        exit (0);
     }
+    advance(p_tokenizer);
 
     // varName
-    if (!write_identifier(pThis, DEFINED, type, kind)) return;
+    if (!(p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER)) {
+        TOKEN_ERR("identifier");
+        exit (0);
+    }
+    pThis->symbols.define(&(pThis->symbols), p_tokenizer->current_token, type, kind);
+    advance(p_tokenizer);
 
     // (',' varName)*
     while ((p_tokenizer->tokenType(p_tokenizer) == SYMBOL) &&
         (!strcmp(p_tokenizer->symbol(p_tokenizer), ","))) {
-        if (!write_symbol(pThis, ",")) return;
-        if (!write_identifier(pThis, DEFINED, type, kind)) return;
+        advance(p_tokenizer);
+
+        if (!(p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER)) {
+            TOKEN_ERR("identifier");
+            exit (0);
+        }
+        pThis->symbols.define(&(pThis->symbols), p_tokenizer->current_token, type, kind);
+        advance(p_tokenizer);
     }
 
     // ';'
-    if (!write_symbol(pThis, ";")) return;
-
-    fprintf(pThis->fp, "</classVarDec>\n");
+    if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+        (strcmp(p_tokenizer->symbol(p_tokenizer), ","))) {
+        TOKEN_ERR(";");
+        exit (0);
+    }
+    advance(p_tokenizer);
 
     free(type);
 }
@@ -143,78 +171,104 @@ void _compilation_engine_compileClassVarDec(CompilationEngine *pThis)
 void _compilation_engine_compileSubroutine(CompilationEngine *pThis)
 {
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
+    enum KeyWord subroutine;
+    char *vm_func_name;
+
+    vm_func_name = malloc(sizeof(char) * 1024);
 
     pThis->symbols.startSubroutine(&pThis->symbols);
-
-    fprintf(pThis->fp, "<subroutineDec>\n");
 
     // ('constructor' | 'function' | 'method')
     switch (p_tokenizer->keyWord(p_tokenizer)) {
         case CONSTRUCTOR:
-            if (!write_keyword(pThis, CONSTRUCTOR)) return;
-            break;
         case FUNCTION:
-            if (!write_keyword(pThis, FUNCTION)) return;
-            break;
         case METHOD:
-            if (!write_keyword(pThis, METHOD)) return;
+            subroutine = p_tokenizer->keyWord(p_tokenizer);
             break;
         default:
             TOKEN_ERR("'constructor' or 'function' or 'method'");
+            exit(0);
     }
+    advance(p_tokenizer);
 
     // ('void' or type)
-    switch (p_tokenizer->keyWord(p_tokenizer)) {
-        case VOID:
-            if (!write_keyword(pThis, VOID)) return;
-            break;
-        case INT:
-            if (!write_keyword(pThis, INT)) return;
-            break;
-        case CHAR:
-            if (!write_keyword(pThis, CHAR)) return;
-            break;
-        case BOOLEAN:
-            if (!write_keyword(pThis, BOOLEAN)) return;
-            break;
-        default:
-            if (p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER)
-                write_identifier(pThis, USED, NULL, ID_CLASS);
-            else
-                TOKEN_ERR("'void' or 'int' or 'char' or 'boolean' or 'identifier'");
+    if (p_tokenizer->tokenType(p_tokenizer) == KEYWORD) {
+        switch (p_tokenizer->keyWord(p_tokenizer)) {
+            case VOID:
+            case INT:
+            case CHAR:
+            case BOOLEAN:
+                break;
+            default:
+                TOKEN_ERR("'int' or 'char' or 'boolean'");
+                exit (0);
+        }
+    } else if (p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER) {
+        // nop
+    } else {
+        TOKEN_ERR("'int' or 'char' or 'boolean' or 'identifier'");
+        exit (0);
     }
+    advance(p_tokenizer);
 
     // subroutineName
-    if (!write_identifier(pThis, DEFINED, NULL, ID_SUBROUTINE)) return;
+    if (!(p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER)) {
+        TOKEN_ERR("identifier");
+        exit (0);
+    }
+    sprintf(vm_func_name, "%s.%s", pThis->class_name, p_tokenizer->current_token);
+    advance(p_tokenizer);
 
     // '('
-    if (!write_symbol(pThis, "(")) return;
+    if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+        (strcmp(p_tokenizer->symbol(p_tokenizer), "("))) {
+        TOKEN_ERR("(");
+        exit (0);
+    }
+    advance(p_tokenizer);
 
     // parameterList
+    if (subroutine == METHOD)
+        pThis->symbols.define(&(pThis->symbols), "this", pThis->class_name, ID_ARG);
     pThis->compileParameterlist(pThis);
 
     // ')'
-    if (!write_symbol(pThis, ")")) return;
+    if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+        (strcmp(p_tokenizer->symbol(p_tokenizer), ")"))) {
+        TOKEN_ERR(")");
+        exit (0);
+    }
+    advance(p_tokenizer);
 
     // subroutineBody
-    fprintf(pThis->fp, "<subroutineBody>\n");
-
     // "{"
-    if (!write_symbol(pThis, "{")) return;
+    if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+        (strcmp(p_tokenizer->symbol(p_tokenizer), "{"))) {
+        TOKEN_ERR("{");
+        exit (0);
+    }
+    advance(p_tokenizer);
 
     // verDec*
     while (p_tokenizer->tokenType(p_tokenizer) == KEYWORD && p_tokenizer->keyWord(p_tokenizer) == VAR)
         pThis->compileVarDec(pThis);
 
+    // writeFunction
+    pThis->writer.writeFunction(&(pThis->writer), vm_func_name, pThis->symbols.varCount(&(pThis->symbols), ID_VAR));
+
     // statements
     pThis->compileStatements(pThis);
 
     // "}"
-    if (!write_symbol(pThis, "}")) return;
+    if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+        (strcmp(p_tokenizer->symbol(p_tokenizer), "}"))) {
+        TOKEN_ERR("}");
+        exit (0);
+    }
+    advance(p_tokenizer);
 
-    fprintf(pThis->fp, "</subroutineBody>\n");
+    free(vm_func_name);
 
-    fprintf(pThis->fp, "</subroutineDec>\n");
 }
 
 void _compilation_engine_compileParameterlist(CompilationEngine *pThis)
@@ -225,69 +279,77 @@ void _compilation_engine_compileParameterlist(CompilationEngine *pThis)
 
     type = malloc(sizeof(char) * 1024);
 
-    fprintf(pThis->fp, "<parameterList>\n");
-
     for (i = 0; (i < 2) && (is_type(p_tokenizer)); i++) {
         // type
-        switch (p_tokenizer->keyWord(p_tokenizer)) {
-            case INT:
-                strcpy(type, "int");
-                if (!write_keyword(pThis, INT)) return;
-                break;
-            case CHAR:
-                strcpy(type, "char");
-                if (!write_keyword(pThis, CHAR)) return;
-                break;
-            case BOOLEAN:
-                strcpy(type, "boolean");
-                if (!write_keyword(pThis, BOOLEAN)) return;
-                break;
-            default:
-                if (p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER) {
-                    strcpy(type, p_tokenizer->current_token);
-                    write_identifier(pThis, USED, NULL, ID_CLASS);
-                } else {
-                    TOKEN_ERR("'int' or 'char' or 'boolean' or 'identifier'");
-                }
+        if (p_tokenizer->tokenType(p_tokenizer) == KEYWORD) {
+            switch (p_tokenizer->keyWord(p_tokenizer)) {
+                case INT:
+                    strcpy(type, "int");
+                    break;
+                case CHAR:
+                    strcpy(type, "char");
+                    break;
+                case BOOLEAN:
+                    strcpy(type, "boolean");
+                    break;
+                default:
+                    TOKEN_ERR("'int' or 'char' or 'boolean'");
+                    exit (0);
+            }
+        } else if (p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER) {
+            strcpy(type, p_tokenizer->current_token);
+        } else {
+            TOKEN_ERR("'int' or 'char' or 'boolean' or 'identifier'");
+            exit (0);
         }
+        advance(p_tokenizer);
 
         // varName
-        if (!write_identifier(pThis, DEFINED, type, ID_ARG)) return;
+        if (!(p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER)) {
+            TOKEN_ERR("identifier");
+            exit (0);
+        }
+        pThis->symbols.define(&(pThis->symbols), p_tokenizer->current_token, type, ID_ARG);
+        advance(p_tokenizer);
 
         while (p_tokenizer->tokenType(p_tokenizer) == SYMBOL
                 && !strcmp(",", p_tokenizer->symbol(p_tokenizer))) {
             // ','
-            if (!write_symbol(pThis, ",")) return;
+            advance(p_tokenizer);
 
             // type
-            switch (p_tokenizer->keyWord(p_tokenizer)) {
-                case INT:
-                    strcpy(type, "int");
-                    if (!write_keyword(pThis, INT)) return;
-                    break;
-                case CHAR:
-                    strcpy(type, "char");
-                    if (!write_keyword(pThis, CHAR)) return;
-                    break;
-                case BOOLEAN:
-                    strcpy(type, "boolean");
-                    if (!write_keyword(pThis, BOOLEAN)) return;
-                    break;
-                default:
-                    if (p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER) {
-                        strcpy(type, p_tokenizer->current_token);
-                        write_identifier(pThis, USED, NULL, ID_CLASS);
-                    } else {
-                        TOKEN_ERR("'int' or 'char' or 'boolean' or 'identifier'");
-                    }
+            if (p_tokenizer->tokenType(p_tokenizer) == KEYWORD) {
+                switch (p_tokenizer->keyWord(p_tokenizer)) {
+                    case INT:
+                        strcpy(type, "int");
+                        break;
+                    case CHAR:
+                        strcpy(type, "char");
+                        break;
+                    case BOOLEAN:
+                        strcpy(type, "boolean");
+                        break;
+                    default:
+                        TOKEN_ERR("'int' or 'char' or 'boolean'");
+                        exit (0);
+                }
+            } else if (p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER) {
+                strcpy(type, p_tokenizer->current_token);
+            } else {
+                TOKEN_ERR("'int' or 'char' or 'boolean' or 'identifier'");
+                exit (0);
             }
+            advance(p_tokenizer);
 
             // varName
-            if (!write_identifier(pThis, DEFINED, type, ID_ARG)) return;
+            if (!(p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER)) {
+                TOKEN_ERR("identifier");
+                exit (0);
+            }
+            pThis->symbols.define(&(pThis->symbols), p_tokenizer->current_token, type, ID_ARG);
+            advance(p_tokenizer);
         }
     };
-
-    fprintf(pThis->fp, "</parameterList>\n");
 
     free(type);
 
@@ -344,13 +406,13 @@ void _compilation_engine_compileVarDec(CompilationEngine *pThis)
     if (!write_symbol(pThis, ";")) return;
 
     fprintf(pThis->fp, "</varDec>\n");
+
+    free(type);
 }
 
 void _compilation_engine_compileStatements(CompilationEngine *pThis)
 {
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
-
-    fprintf(pThis->fp, "<statements>\n");
 
     while (p_tokenizer->tokenType(p_tokenizer) == KEYWORD
             && (p_tokenizer->keyWord(p_tokenizer) == LET
@@ -379,55 +441,104 @@ void _compilation_engine_compileStatements(CompilationEngine *pThis)
                 break;
         }
     }
-
-    fprintf(pThis->fp, "</statements>\n");
 }
 
 void _compilation_engine_compileDo(CompilationEngine *pThis)
 {
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
-    fprintf(pThis->fp, "<doStatement>\n");
+    char *vm_func_name, *identifier;
+
+    vm_func_name = malloc(sizeof(char) * 1024);
+    identifier = malloc(sizeof(char) * 1024);
 
     // 'do'
-    if (!write_keyword(pThis, DO)) return;
+    if (!((p_tokenizer->tokenType(p_tokenizer) == KEYWORD)
+                && (p_tokenizer->keyWord(p_tokenizer) == DO))) {
+        TOKEN_ERR("do");
+        exit (0);
+    }
+    advance(p_tokenizer);
 
     // subroutineCall
     // subroutineName or className or varName
-    if (!write_identifier(pThis, USED, NULL, ID_NONE)) return;
+    if (!(p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER)) {
+        TOKEN_ERR("identifier");
+        exit (0);
+    }
+    strcpy(identifier, p_tokenizer->current_token);
+    advance(p_tokenizer);
 
     if (!strcmp(p_tokenizer->symbol(p_tokenizer), "(")) {
+        sprintf(vm_func_name, "%s.%s", pThis->class_name, identifier);
         // '('
-        if (!write_symbol(pThis, "(")) return;
+        if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+                (strcmp(p_tokenizer->symbol(p_tokenizer), "("))) {
+            TOKEN_ERR("(");
+            exit (0);
+        }
+        advance(p_tokenizer);
 
         // expressionnList
+        pThis->nArgs = 0;
         pThis->compileExpressionList(pThis);
 
         // ')'
-        if (!write_symbol(pThis, ")")) return;
+        if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+                (strcmp(p_tokenizer->symbol(p_tokenizer), ")"))) {
+            TOKEN_ERR(")");
+            exit (0);
+        }
+        advance(p_tokenizer);
 
     } else if (!strcmp(p_tokenizer->symbol(p_tokenizer), ".")) {
         // '.'
-        if (!write_symbol(pThis, ".")) return;
+        advance(p_tokenizer);
 
-        // subroutinenName
-        if (!write_identifier(pThis, USED, NULL, ID_SUBROUTINE)) return;
+        // subroutineName
+        if (!(p_tokenizer->tokenType(p_tokenizer) == INDENTIFIER)) {
+            TOKEN_ERR("identifier");
+            exit (0);
+        }
+        sprintf(vm_func_name, "%s.%s", identifier, p_tokenizer->current_token);
+        advance(p_tokenizer);
 
         // '('
-        if (!write_symbol(pThis, "(")) return;
+        if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+                (strcmp(p_tokenizer->symbol(p_tokenizer), "("))) {
+            TOKEN_ERR("(");
+            exit (0);
+        }
+        advance(p_tokenizer);
 
         // expressionnList
+        pThis->nArgs = 0;
         pThis->compileExpressionList(pThis);
 
         // ')'
-        if (!write_symbol(pThis, ")")) return;
+        if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+                (strcmp(p_tokenizer->symbol(p_tokenizer), ")"))) {
+            TOKEN_ERR(")");
+            exit (0);
+        }
+        advance(p_tokenizer);
     } else {
-        return;
+        TOKEN_ERR("'(' or ','");
+        exit (0);
     }
 
-    // ';'
-    if (!write_symbol(pThis, ";")) return;
+    // writeCall
+    pThis->writer.writeCall(&(pThis->writer), vm_func_name, pThis->nArgs);
 
-    fprintf(pThis->fp, "</doStatement>\n");
+    // ';'
+    if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+        (strcmp(p_tokenizer->symbol(p_tokenizer), ";"))) {
+        TOKEN_ERR(";");
+        exit (0);
+    }
+    advance(p_tokenizer);
+
+    free(vm_func_name);
+    free(identifier);
 }
 
 void _compilation_engine_compileLet(CompilationEngine *pThis)
@@ -495,19 +606,26 @@ void _compilation_engine_compileReturn(CompilationEngine *pThis)
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
     int i;
 
-    fprintf(pThis->fp, "<returnStatement>\n");
-
     // 'return'
-    if (!write_keyword(pThis, RETURN)) return;
+    if (!((p_tokenizer->tokenType(p_tokenizer) == KEYWORD)
+                && (p_tokenizer->keyWord(p_tokenizer) == RETURN))) {
+        TOKEN_ERR("return");
+        exit (0);
+    }
+    pThis->writer.writeReturn(&(pThis->writer));
+    advance(p_tokenizer);
 
     // expression?
     for (i = 0; (i < 2) && is_begin_of_term(p_tokenizer); i++)
         pThis->compileExpression(pThis);
 
     // ';'
-    if (!write_symbol(pThis, ";")) return;
-
-    fprintf(pThis->fp, "</returnStatement>\n");
+    if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+        (strcmp(p_tokenizer->symbol(p_tokenizer), ";"))) {
+        TOKEN_ERR(";");
+        exit (0);
+    }
+    advance(p_tokenizer);
 }
 
 void _compilation_engine_compileIf(CompilationEngine *pThis)
@@ -558,32 +676,45 @@ void _compilation_engine_compileIf(CompilationEngine *pThis)
 void _compilation_engine_compileExpression(CompilationEngine *pThis)
 {
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
+    char op[2];
+    struct {char op[2]; enum command com;} op_tbl[7] =
+        {{"+", COM_ADD}, {"-", COM_SUB}, {"=", COM_EQ},
+         {">", COM_GT},  {"<", COM_LT},  {"&", COM_ADD}, {"|", COM_OR},
+    };
+    int i;
 
-    fprintf(pThis->fp, "<expression>\n");
 
     // term
     pThis->compileTerm(pThis);
 
     // (op term)*
     while (is_op(p_tokenizer)) {
-        if(!write_symbol(pThis, p_tokenizer->current_token)) return;
+        strcpy(op, p_tokenizer->current_token);
+        advance(p_tokenizer);
 
         pThis->compileTerm(pThis);
-    }
 
-    fprintf(pThis->fp, "</expression>\n");
+        // write op
+        for (i = 0; strcmp(op_tbl[i].op, op) && i < 7; i++);
+        if (i < 7) {
+            pThis->writer.writeArithmetic(&(pThis->writer), op_tbl[i].com);
+        } else if (!strcmp(op, "/")) {
+            pThis->writer.writeCall(&(pThis->writer), "Math.divide", 2);
+        } else if (!strcmp(op, "*")) {
+            pThis->writer.writeCall(&(pThis->writer), "Math.multiply", 2);
+        }
+    }
 }
 
 void _compilation_engine_compileTerm(CompilationEngine *pThis)
 {
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
 
-    fprintf(pThis->fp, "<term>\n");
-
     switch (p_tokenizer->tokenType(p_tokenizer)) {
         case INT_CONST:
             // integerConstant
-            if (!write_integerConstant(pThis)) return;
+            pThis->writer.writePush(&(pThis->writer), SEG_CONST, atoi(p_tokenizer->current_token));
+            advance(p_tokenizer);
             break;
 
         case STRING_CONST:
@@ -615,9 +746,25 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
 
             } else if (!strcmp(p_tokenizer->symbol(p_tokenizer), "(")) {
                 // '(' expression ')'
-                if (!write_symbol(pThis, "(")) return;
+
+                // '('
+                if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+                        (strcmp(p_tokenizer->symbol(p_tokenizer), "("))) {
+                    TOKEN_ERR("(");
+                    exit (0);
+                }
+                advance(p_tokenizer);
+
                 pThis->compileExpression(pThis);
-                if (!write_symbol(pThis, ")")) return;
+
+
+                // ')'
+                if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+                        (strcmp(p_tokenizer->symbol(p_tokenizer), ")"))) {
+                    TOKEN_ERR(")");
+                    exit (0);
+                }
+                advance(p_tokenizer);
 
             } else {
                 TOKEN_ERR("-, ~ or '(' ");
@@ -647,7 +794,7 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
             } else if (!strcmp(p_tokenizer->symbol(p_tokenizer), ".")) {
                 if (write_symbol(pThis, ".")) {
                     // '.'
-                    // subroutinenName
+                    // subroutineName
                     if (!write_identifier(pThis, USED, NULL, ID_SUBROUTINE)) return;
 
                     // '('
@@ -668,7 +815,6 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
             break;
     }
 
-    fprintf(pThis->fp, "</term>\n");
 }
 
 void _compilation_engine_compileExpressionList(CompilationEngine *pThis)
@@ -676,22 +822,21 @@ void _compilation_engine_compileExpressionList(CompilationEngine *pThis)
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
     int i;
 
-    fprintf(pThis->fp, "<expressionList>\n");
-
     for (i = 0; (i < 2) && (is_begin_of_expression(p_tokenizer)); i++) {
         // expression
         pThis->compileExpression(pThis);
+        pThis->nArgs++;
 
-        while (!strcmp(p_tokenizer->symbol(p_tokenizer), ",")) {
+        while (p_tokenizer->tokenType(p_tokenizer) == SYMBOL &&
+                (!strcmp(p_tokenizer->symbol(p_tokenizer), ","))) {
             // ','
-            if (!write_symbol(pThis, ",")) return;
+            advance(p_tokenizer);
 
             // expression
             pThis->compileExpression(pThis);
+            pThis->nArgs++;
         }
     };
-
-    fprintf(pThis->fp, "</expressionList>\n");
 
     return;
 }
@@ -701,17 +846,18 @@ void _compilation_engine_del(CompilationEngine *pThis)
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
 
     p_tokenizer->del(p_tokenizer);
+    pThis->writer.close(&pThis->writer);
 
-    fclose(pThis->fp); 
+    free(pThis->class_name);
     return;
 }
 
 static bool write_keyword(CompilationEngine *pThis, enum KeyWord keyword)
 {
     const char *str[] = {"class", "method", "function", "constructor", "int",    "boolean",
-                             "char",  "void",   "var",      "static",      "field",  "let",
-                             "do",    "if",     "else",     "while",       "return", "true",
-                             "false", "null",   "this",
+                         "char",  "void",   "var",      "static",      "field",  "let",
+                         "do",    "if",     "else",     "while",       "return", "true",
+                         "false", "null",   "this",
                             };
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
 
@@ -720,7 +866,6 @@ static bool write_keyword(CompilationEngine *pThis, enum KeyWord keyword)
         TOKEN_ERR(str[keyword]);
         return false;
     }
-    // fprintf(pThis->fp, "<keyword> %s </keyword>\n", str[keyword]);
     p_tokenizer->printCurrentToken(p_tokenizer, pThis->fp);
 
     if (p_tokenizer->hasMoreTokens(p_tokenizer))
@@ -739,23 +884,6 @@ static bool write_symbol(CompilationEngine *pThis, char *symbol)
         return false;
     }
     // fprintf(pThis->fp, "<symbol> %s </symbol>\n", p_tokenizer->symbol(p_tokenizer));
-    p_tokenizer->printCurrentToken(p_tokenizer, pThis->fp);
-
-    if (p_tokenizer->hasMoreTokens(p_tokenizer))
-        p_tokenizer->advance(p_tokenizer);
-
-    return true;
-}
-
-static bool write_integerConstant(CompilationEngine *pThis)
-{
-    JackTokenizer *p_tokenizer = &(pThis->tokenizer);
-
-    if (!(p_tokenizer->tokenType(p_tokenizer) == INT_CONST)) {
-        TOKEN_ERR("integerConstant");
-        return false;
-    }
-    // fprintf(pThis->fp, "<integerConstant> %d </integerConstant>\n", p_tokenizer->intVal(p_tokenizer));
     p_tokenizer->printCurrentToken(p_tokenizer, pThis->fp);
 
     if (p_tokenizer->hasMoreTokens(p_tokenizer))
@@ -891,4 +1019,13 @@ static bool is_begin_of_expression(JackTokenizer *pThis)
     }
 
     return false;
+}
+
+static void advance(JackTokenizer *p_tokenizer)
+{
+    if (!p_tokenizer->hasMoreTokens(p_tokenizer)) {
+        fprintf(stderr, "no more token\n");
+        exit (0);
+    }
+    p_tokenizer->advance(p_tokenizer);
 }

@@ -90,10 +90,10 @@ int main(int argc, char **argv)
         if (filename_list.filenames[i].fullname == NULL) break;
         if (strcmp(filename_list.filenames[i].extension, "jack")) continue;
 
-        buf1 = (char *)malloc(sizeof(char) * (strlen(filename_list.filenames[i].basename) + 4));
+        buf1 = (char *)malloc(sizeof(char) * (strlen(filename_list.filenames[i].basename) + 3));
         buf2 = (char *)malloc(sizeof(char) * (strlen(filename_list.filenames[i].basename) + 5));
         strcpy(buf1, filename_list.filenames[i].basename);
-        strcat(buf1, ".xml");
+        strcat(buf1, ".vm");
         strcpy(buf2, filename_list.filenames[i].basename);
         strcat(buf2, "T.xml");
         engine.init(&engine, filename_list.filenames[i].fullname, buf1);
