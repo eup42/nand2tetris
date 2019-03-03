@@ -23,6 +23,7 @@ typedef struct compilation_engine {
     FILE *fp;
     char *class_name;
     unsigned int nArgs;
+    enum KeyWord ret_type;
 
     void (*init)(struct compilation_engine *, char *, char *);
     void (*compileClass)(struct compilation_engine *);

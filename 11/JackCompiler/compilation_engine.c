@@ -190,9 +190,12 @@ void _compilation_engine_compileSubroutine(CompilationEngine *pThis)
     advance(p_tokenizer);
 
     // ('void' or type)
+    pThis->ret_type = MAX_KEYWORD;  // prevent from remaining past value
     if (p_tokenizer->tokenType(p_tokenizer) == KEYWORD) {
         switch (p_tokenizer->keyWord(p_tokenizer)) {
             case VOID:
+                pThis->ret_type = VOID;
+                break;
             case INT:
             case CHAR:
             case BOOLEAN:
@@ -253,6 +256,19 @@ void _compilation_engine_compileSubroutine(CompilationEngine *pThis)
 
     // writeFunction
     pThis->writer.writeFunction(&(pThis->writer), vm_func_name, pThis->symbols.varCount(&(pThis->symbols), ID_VAR));
+    switch (subroutine) {
+        case CONSTRUCTOR:
+            pThis->writer.writePush(&(pThis->writer), SEG_CONST, pThis->symbols.varCount(&(pThis->symbols), ID_FIELD));
+            pThis->writer.writeCall(&(pThis->writer), "Memory.alloc", 1);
+            pThis->writer.writePop(&(pThis->writer), SEG_POINTER, 0);
+            break;
+
+        case METHOD:
+            pThis->writer.writePush(&(pThis->writer), SEG_ARG, 0);
+            pThis->writer.writePop(&(pThis->writer), SEG_POINTER, 0);
+        default:
+            break;
+    }
 
     // statements
     pThis->compileStatements(pThis);
@@ -463,6 +479,12 @@ void _compilation_engine_compileDo(CompilationEngine *pThis)
 {
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
     char *vm_func_name, *identifier;
+    struct {enum kind kind; enum segment seg;} knd_seg_tbl[4] = {
+        {ID_STATIC, SEG_STATIC}, {ID_ARG, SEG_ARG},
+        {ID_VAR, SEG_LOCAL},     {ID_FIELD, SEG_THIS},
+    };
+    unsigned int i;
+    enum kind kind;
 
     vm_func_name = malloc(sizeof(char) * 1024);
     identifier = malloc(sizeof(char) * 1024);
@@ -494,8 +516,11 @@ void _compilation_engine_compileDo(CompilationEngine *pThis)
         }
         advance(p_tokenizer);
 
+        // write push 'this' pointer because call method
+        pThis->writer.writePush(&(pThis->writer), SEG_POINTER, 0);
+
         // expressionnList
-        pThis->nArgs = 0;
+        pThis->nArgs = 1;
         pThis->compileExpressionList(pThis);
 
         // ')'
@@ -515,7 +540,13 @@ void _compilation_engine_compileDo(CompilationEngine *pThis)
             TOKEN_ERR("identifier");
             exit (0);
         }
-        sprintf(vm_func_name, "%s.%s", identifier, p_tokenizer->current_token);
+
+        kind = pThis->symbols.kindOf(&(pThis->symbols), identifier);
+        if (kind == ID_NONE)
+            sprintf(vm_func_name, "%s.%s", identifier, pThis->tokenizer.identifier(&(pThis->tokenizer)));
+        else
+            sprintf(vm_func_name, "%s.%s", pThis->symbols.typeOf(&(pThis->symbols), identifier), p_tokenizer->current_token);
+
         advance(p_tokenizer);
 
         // '('
@@ -526,8 +557,16 @@ void _compilation_engine_compileDo(CompilationEngine *pThis)
         }
         advance(p_tokenizer);
 
-        // expressionnList
         pThis->nArgs = 0;
+
+        // write push 'this' pointer because call method
+        if (kind != ID_NONE) {
+            for (i = 0; knd_seg_tbl[i].kind != kind; i++);
+            pThis->writer.writePush(&(pThis->writer), knd_seg_tbl[i].seg, pThis->symbols.indexOf((&pThis->symbols), identifier));
+            pThis->nArgs++;
+        }
+
+        // expressionnList
         pThis->compileExpressionList(pThis);
 
         // ')'
@@ -544,6 +583,7 @@ void _compilation_engine_compileDo(CompilationEngine *pThis)
 
     // writeCall
     pThis->writer.writeCall(&(pThis->writer), vm_func_name, pThis->nArgs);
+    pThis->writer.writePop(&(pThis->writer), SEG_TEMP, 0);
 
     // ';'
     if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
@@ -724,6 +764,8 @@ void _compilation_engine_compileReturn(CompilationEngine *pThis)
     advance(p_tokenizer);
 
     // write return
+    if (pThis->ret_type == VOID)
+        pThis->writer.writePush(&(pThis->writer), SEG_CONST, 0);
     pThis->writer.writeReturn(&(pThis->writer));
 }
 
@@ -880,6 +922,7 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
     };
     int i;
     char *identifier, *subroutine_name;
+    enum kind kind;
 
     identifier = malloc(sizeof(char) * 1024);
     subroutine_name = malloc(sizeof(char) * 1024);
@@ -986,8 +1029,11 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
                 }
                 advance(p_tokenizer);
 
+                // write push 'this' pointer because call method
+                pThis->writer.writePush(&(pThis->writer), SEG_POINTER, 0);
+
                 // expressionnList
-                pThis->nArgs = 0;
+                pThis->nArgs = 1;
                 pThis->compileExpressionList(pThis);
 
                 // ')'
@@ -1010,7 +1056,11 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
                     TOKEN_ERR("identifier");
                     exit (0);
                 }
-                sprintf(subroutine_name, "%s.%s", identifier, pThis->tokenizer.identifier(&(pThis->tokenizer)));
+                kind = pThis->symbols.kindOf(&(pThis->symbols), identifier);
+                if (kind == ID_NONE)
+                    sprintf(subroutine_name, "%s.%s", identifier, pThis->tokenizer.identifier(&(pThis->tokenizer)));
+                else
+                    sprintf(subroutine_name, "%s.%s", pThis->symbols.typeOf(&(pThis->symbols), identifier), p_tokenizer->current_token);
                 advance(p_tokenizer);
 
                 // '('
@@ -1021,8 +1071,16 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
                 }
                 advance(p_tokenizer);
 
-                // expressionnList
                 pThis->nArgs = 0;
+
+                // write push 'this' pointer because call method
+                if (kind != ID_NONE) {
+                    for (i = 0; knd_seg_tbl[i].kind != kind; i++);
+                    pThis->writer.writePush(&(pThis->writer), knd_seg_tbl[i].seg, pThis->symbols.indexOf((&pThis->symbols), identifier));
+                    pThis->nArgs++;
+                }
+
+                // expressionnList
                 pThis->compileExpressionList(pThis);
 
                 // ')'
