@@ -33,12 +33,12 @@ void _symbol_table_define(struct symbol_table *pThis, char *name, char *type, en
     switch (kind) {
         case ID_STATIC:
         case ID_FIELD:
-            row = &pThis->class[pThis->index[kind]];
+            row = &pThis->class[pThis->index[ID_STATIC] + pThis->index[ID_FIELD]];
             break;
 
         case ID_ARG:
         case ID_VAR:
-            row = &pThis->sub[pThis->index[kind]];
+            row = &pThis->sub[pThis->index[ID_ARG] +pThis->index[ID_VAR]];
             break;
 
         default:
