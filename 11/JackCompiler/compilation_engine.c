@@ -13,9 +13,6 @@
 
 #define TOKEN_ERR(token) do {fprintf(stderr, "%s %s() : error %s is expected\n", __FILE__, __FUNCTION__, token); } while (0)
 
-
-static bool write_symbol(CompilationEngine *pThis, char *symbol);
-static bool write_stringConstant(CompilationEngine *pThis);
 static bool is_type(JackTokenizer *pThis);
 static bool is_begin_of_term(JackTokenizer *pThis);
 static bool is_op(JackTokenizer *pThis);
@@ -607,6 +604,9 @@ void _compilation_engine_compileLet(CompilationEngine *pThis)
         {ID_STATIC, SEG_STATIC}, {ID_ARG, SEG_ARG},
         {ID_VAR, SEG_LOCAL},     {ID_FIELD, SEG_THIS},
     };
+    bool is_array_elem = false;
+    static unsigned int tmp_index_base = 0;
+    unsigned int tmp_index;
 
     var_name = malloc(sizeof(char) * 1024);
 
@@ -628,9 +628,33 @@ void _compilation_engine_compileLet(CompilationEngine *pThis)
 
     // ('[' expression ']')?
     for (i = 0; (i < 2) && (!strcmp(p_tokenizer->current_token, "[")); i++) {
-        if (!write_symbol(pThis, "[")) return;
+        is_array_elem = true;
+        tmp_index = tmp_index_base % 7 + 1;
+
+        // '['
+        if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+                (strcmp(p_tokenizer->symbol(p_tokenizer), "["))) {
+            TOKEN_ERR("[");
+            exit (0);
+        }
+        advance(p_tokenizer);
+
         pThis->compileExpression(pThis);
-        if (!write_symbol(pThis, "]")) return;
+
+        // write code
+        for (i = 0; knd_seg_tbl[i].kind != p_symbols->kindOf(p_symbols, var_name); i++);
+        pThis->writer.writePush(&(pThis->writer),
+                knd_seg_tbl[i].seg, p_symbols->indexOf(p_symbols, var_name));
+        pThis->writer.writeArithmetic(&(pThis->writer), COM_ADD);
+        pThis->writer.writePop(&(pThis->writer), SEG_TEMP, tmp_index);
+
+        // ']'
+        if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+                (strcmp(p_tokenizer->symbol(p_tokenizer), "]"))) {
+            TOKEN_ERR("]");
+            exit (0);
+        }
+        advance(p_tokenizer);
     }
 
     // '='
@@ -645,9 +669,16 @@ void _compilation_engine_compileLet(CompilationEngine *pThis)
     pThis->compileExpression(pThis);
 
     // write code
-    for (i = 0; knd_seg_tbl[i].kind != p_symbols->kindOf(p_symbols, var_name); i++);
-    pThis->writer.writePop(&(pThis->writer),
-            knd_seg_tbl[i].seg, p_symbols->indexOf(p_symbols, var_name));
+    if (is_array_elem) {
+        pThis->writer.writePush(&(pThis->writer), SEG_TEMP, tmp_index);
+        pThis->writer.writePop(&(pThis->writer), SEG_POINTER, 1);
+        pThis->writer.writePop(&(pThis->writer), SEG_THAT, 0);
+        tmp_index_base++;
+    } else {
+        for (i = 0; knd_seg_tbl[i].kind != p_symbols->kindOf(p_symbols, var_name); i++);
+        pThis->writer.writePop(&(pThis->writer),
+                knd_seg_tbl[i].seg, p_symbols->indexOf(p_symbols, var_name));
+    }
 
     // ';'
     if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
@@ -923,6 +954,7 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
     int i;
     char *identifier, *subroutine_name;
     enum kind kind;
+    char *str;
 
     identifier = malloc(sizeof(char) * 1024);
     subroutine_name = malloc(sizeof(char) * 1024);
@@ -936,7 +968,14 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
 
         case STRING_CONST:
             // stringConstant
-            if (!write_stringConstant(pThis)) return;
+            str = p_tokenizer->stringVal(p_tokenizer);
+            pThis->writer.writePush(&(pThis->writer), SEG_CONST, strlen(str));
+            pThis->writer.writeCall(&(pThis->writer), "String.new", 1);
+            for (i = 0; i < strlen(str); i++) {
+                pThis->writer.writePush(&(pThis->writer), SEG_CONST, str[i]);
+                pThis->writer.writeCall(&(pThis->writer), "String.appendChar", 2);
+            }
+            advance(p_tokenizer);
             break;
 
         case KEYWORD:
@@ -1016,9 +1055,30 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
 
             if (!strcmp(p_tokenizer->identifier(p_tokenizer), "[")) {
                 // '[' expression ']'
-                if (!write_symbol(pThis, "[")) return;
+                if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+                        (strcmp(p_tokenizer->symbol(p_tokenizer), "["))) {
+                    TOKEN_ERR("[");
+                    exit (0);
+                }
+                advance(p_tokenizer);
+
                 pThis->compileExpression(pThis);
-                if (!write_symbol(pThis, "]")) return;
+
+                // write code
+                for (i = 0; knd_seg_tbl[i].kind != p_symbols->kindOf(p_symbols, identifier); i++);
+                pThis->writer.writePush(&(pThis->writer),
+                        knd_seg_tbl[i].seg, p_symbols->indexOf(p_symbols, identifier));
+                pThis->writer.writeArithmetic(&(pThis->writer), COM_ADD);
+                pThis->writer.writePop(&(pThis->writer), SEG_POINTER, 1);
+                pThis->writer.writePush(&(pThis->writer), SEG_THAT, 0);
+
+                if ((p_tokenizer->tokenType(p_tokenizer) != SYMBOL) ||
+                        (strcmp(p_tokenizer->symbol(p_tokenizer), "]"))) {
+                    TOKEN_ERR("]");
+                    exit (0);
+                }
+                advance(p_tokenizer);
+
 
             } else if (!strcmp(p_tokenizer->identifier(p_tokenizer), "(")) {
                 // '('
@@ -1146,41 +1206,6 @@ void _compilation_engine_del(CompilationEngine *pThis)
 
     free(pThis->class_name);
     return;
-}
-
-static bool write_symbol(CompilationEngine *pThis, char *symbol)
-{
-    JackTokenizer *p_tokenizer = &(pThis->tokenizer);
-
-    if (!(p_tokenizer->tokenType(p_tokenizer) == SYMBOL && !strcmp(p_tokenizer->symbol(p_tokenizer), symbol))) {
-        printf("token = %s\n", p_tokenizer->current_token);
-        TOKEN_ERR(symbol);
-        return false;
-    }
-    // fprintf(pThis->fp, "<symbol> %s </symbol>\n", p_tokenizer->symbol(p_tokenizer));
-    p_tokenizer->printCurrentToken(p_tokenizer, pThis->fp);
-
-    if (p_tokenizer->hasMoreTokens(p_tokenizer))
-        p_tokenizer->advance(p_tokenizer);
-
-    return true;
-}
-
-static bool write_stringConstant(CompilationEngine *pThis)
-{
-    JackTokenizer *p_tokenizer = &(pThis->tokenizer);
-
-    if (!(p_tokenizer->tokenType(p_tokenizer) == STRING_CONST)) {
-        TOKEN_ERR("stringConstant");
-        return false;
-    }
-    // fprintf(pThis->fp, "<stringConstant> %s </stringConstant>\n", p_tokenizer->stringVal(p_tokenizer));
-    p_tokenizer->printCurrentToken(p_tokenizer, pThis->fp);
-
-    if (p_tokenizer->hasMoreTokens(p_tokenizer))
-        p_tokenizer->advance(p_tokenizer);
-
-    return true;
 }
 
 static bool is_type(JackTokenizer *pThis)
