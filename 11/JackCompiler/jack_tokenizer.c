@@ -143,7 +143,7 @@ void _jack_tokenizer_advance(JackTokenizer *pThis)
             buf = (char *)realloc(buf, sizeof(char *) * (i / (buf_block_size + 1)));
         }
     }
-    fseek(pThis->fp, -1, SEEK_CUR);
+    if (c != EOF) fseek(pThis->fp, -1, SEEK_CUR);
     buf[i] = '\0';
 
     free(pThis->current_token);
