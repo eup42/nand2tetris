@@ -1176,12 +1176,14 @@ void _compilation_engine_compileTerm(CompilationEngine *pThis)
 void _compilation_engine_compileExpressionList(CompilationEngine *pThis)
 {
     JackTokenizer *p_tokenizer = &(pThis->tokenizer);
-    int i;
+    int i, nArgs;
+
+    nArgs = pThis->nArgs;
 
     for (i = 0; (i < 2) && (is_begin_of_expression(p_tokenizer)); i++) {
         // expression
         pThis->compileExpression(pThis);
-        pThis->nArgs++;
+        nArgs++;
 
         while (p_tokenizer->tokenType(p_tokenizer) == SYMBOL &&
                 (!strcmp(p_tokenizer->symbol(p_tokenizer), ","))) {
@@ -1190,9 +1192,11 @@ void _compilation_engine_compileExpressionList(CompilationEngine *pThis)
 
             // expression
             pThis->compileExpression(pThis);
-            pThis->nArgs++;
+            nArgs++;
         }
     };
+
+    pThis->nArgs = nArgs;
 
     return;
 }
