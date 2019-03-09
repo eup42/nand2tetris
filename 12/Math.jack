@@ -8,13 +8,32 @@
  * Note: Jack compilers implement multiplication and division using OS method calls.
  */
 class Math {
+    static Array twoToThe;
 
     /** Initializes the library. */
     function void init() {
+        var int i, n;
+
+        let twoToThe = Array.new(16);
+        let i = 0;
+        let n = 1;
+
+        while (i < 16) {
+            let twoToThe[i] = n;
+            let i = i + 1;
+            let n = n + n;
+        }
+
+        return;
     }
 
     /** Returns the absolute value of x. */
     function int abs(int x) {
+        if (x < 0) {
+            return -x;
+        } else {
+            return x;
+        }
     }
 
     /** Returns the product of x and y. 
@@ -23,6 +42,32 @@ class Math {
      *  the Jack expressions x*y and multiply(x,y) return the same value.
      */
     function int multiply(int x, int y) {
+        var int sum, i, shiftedX;
+
+        if (x = 0) {return 0;}
+        if (y = 0) {return 0;}
+
+        let sum = 0;
+        let i = 0;
+        let shiftedX = x;
+
+        while (i < 16) {
+            if (Math.bit(y, i) = true) {
+                let sum = sum + shiftedX;
+            }
+            let shiftedX = shiftedX + shiftedX;
+            let i = i + 1;
+        }
+
+        return sum;
+    }
+
+    function bool bit(int x, int j) {
+        if (~((x & twoToThe[j]) = 0)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /** Returns the integer part of x/y.
@@ -31,17 +76,54 @@ class Math {
      *  the Jack expressions x/y and divide(x,y) return the same value.
      */
     function int divide(int x, int y) {
+        var int q, a, sign;
+        let sign = 1;
+
+        if (x < 0) {let sign = -sign; let x = -x;}
+        if (y < 0) {let sign = -sign; let y = -y;}
+
+        if (x < y) {return 0;}
+
+        let q = Math.divide(x, 2 * y);
+
+        let a = -2 * q * y + x;
+        if (a < y) {
+            return sign * 2 * q;
+        } else {
+            return sign * 2 * q + 1;
+        }
     }
 
     /** Returns the integer part of the square root of x. */
     function int sqrt(int x) {
+        var int y, i, tmp;
+
+        let y = 0;
+        let i = Math.divide(16, 2);
+        while (~(i < 0)) {
+            let tmp = (y + twoToThe[i]) * (y + twoToThe[i]);
+            if (((tmp < x) | (tmp = x)) & tmp > 0) {let y = y + twoToThe[i];}
+            let i = i - 1;
+        }
+
+        return y;
     }
 
     /** Returns the greater number. */
     function int max(int a, int b) {
+        if (a > b) {
+            return a;
+        } else {
+            return b;
+        }
     }
 
     /** Returns the smaller number. */
     function int min(int a, int b) {
+        if (a > b) {
+            return b;
+        } else {
+            return a;
+        }
     }
 }
